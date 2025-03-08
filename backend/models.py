@@ -3,8 +3,8 @@ from django.utils import timezone
 
 class Student(models.Model):
     student_id = models.AutoField(primary_key=True)
-    firstName = models.CharField(max_length=50)
-    lastName = models.CharField(max_length=50)
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
 
     def __str__(self):
         return f'{self.firstName} {self.lastName}'
