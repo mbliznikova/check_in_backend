@@ -2,7 +2,7 @@ from django.db import models
 from django.utils import timezone
 
 class Student(models.Model):
-    student_id = models.AutoField(primary_key=True)
+    id = models.AutoField(primary_key=True)
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
 
@@ -10,7 +10,7 @@ class Student(models.Model):
         return f'{self.firstName} {self.lastName}'
 
 class ClassModel(models.Model):
-    class_id = models.AutoField(primary_key=True)
+    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
@@ -34,14 +34,14 @@ class Schedule(models.Model):
         return f'{self.class_model.name} on {self.day.name} at {self.class_time}'
 
 class Attendance(models.Model):
-    attendance_id = models.AutoField(primary_key=True)
+    id = models.AutoField(primary_key=True)
     student_id = models.ForeignKey(Student, on_delete=models.CASCADE)
     class_id = models.ForeignKey(ClassModel, on_delete=models.CASCADE)
     attendance_date = models.DateTimeField(default=timezone.now)
     is_showed_up = models.BooleanField(default=True)
 
 class Payments(models.Model):
-    payment_id = models.AutoField(primary_key=True)
+    id = models.AutoField(primary_key=True)
     student_id = models.ForeignKey(Student, on_delete=models.CASCADE)
     class_id = models.ForeignKey(ClassModel, on_delete=models.CASCADE)
     amount = models.FloatField()
