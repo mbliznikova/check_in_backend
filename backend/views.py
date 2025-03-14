@@ -2,35 +2,27 @@ from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 
 from .models import ClassModel, Student
+from .serializers import StudentSerializer, ClassModelSerializer
 
 def classes_list(request):
-    # return the list of all classes
-    # filter based on what classes are scheduled for today?
-    classes = {
-        "response": [
-            {
-                "class_id": cls.class_id,
-                "class_name": cls.name
-            }
-            for cls in ClassModel.objects.all()
-        ]
+    classes = ClassModel.objects.all()
+    serializer = ClassModelSerializer(classes, many=True)
+
+    response = {
+        "response": serializer.data
     }
 
-    return JsonResponse(classes)
+    return JsonResponse(response)
 
 def student_list(request):
-    students = {
-        "response": [
-            {
-                "student_id": student.student_id,
-                "first_name": student.first_name,
-                "last_name": student.last_name
-            }
-            for student in Student.objects.all()
-        ]
+    students = Student.objects.all()
+    serializer = StudentSerializer(students, many=True)
+
+    response = {
+        "response": serializer.data
     }
 
-    return JsonResponse(students)
+    return JsonResponse(response)
 
 def check_in(request):
     # should return:

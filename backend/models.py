@@ -7,7 +7,7 @@ class Student(models.Model):
     last_name = models.CharField(max_length=50)
 
     def __str__(self):
-        return f'{self.firstName} {self.lastName}'
+        return f'{self.first_name} {self.last_name}'
 
 class ClassModel(models.Model):
     id = models.AutoField(primary_key=True)
