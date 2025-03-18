@@ -58,13 +58,13 @@ def confirm(request):
 
         for confirmation in confirmation_list:
             for student_id, classes_list in confirmation.items():
-                for cls_id in classes_list:
+                for cls_id, show_up in classes_list.items():
                     if not Attendance.objects.filter(student_id=student_id, class_id=cls_id, attendance_date=now().date()).exists:
                         attendance_entries.append({
                             "student_id": student_id,
                             "class_id": cls_id,
                             "attendance_date": now().date(),
-                            "is_showed_up": True,
+                            "is_showed_up": show_up,
                         })
 
         if attendance_entries:
