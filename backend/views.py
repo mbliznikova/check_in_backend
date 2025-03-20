@@ -11,6 +11,12 @@ from django.utils.timezone import now
 from .models import ClassModel, Student, Day, Schedule, Attendance
 from .serializers import StudentSerializer, ClassModelSerializer, AttendanceSerializer
 
+def make_error_json_response(message, status_code):
+    return JsonResponse({"message": message}, status=status_code)
+
+def make_success_json_response(error_message, status_code):
+    return JsonResponse({"error": error_message}, status=status_code)
+
 def classes_list(request):
     today_name = datetime.today().strftime("%A")
 
@@ -53,7 +59,7 @@ def check_in(request):
         today_date = check_in_data.get("todayDate")
 
         if not student_id or not classes_list or not today_date:
-            return JsonResponse({"error": "Missing required fields"}, status=400)
+            return make_error_json_response("Missing required fields", 400)
 
         for cls in classes_list:
             if not Attendance.objects.filter(student_id=student_id, class_id=cls, attendance_date=today_date).exists():
@@ -62,22 +68,21 @@ def check_in(request):
                     "class_id": cls,
                     "attendance_date": today_date,
                 }
-                print(f"Data to write: {data_to_write}")
 
                 serializer = AttendanceSerializer(data=data_to_write)
                 if serializer.is_valid():
                     serializer.save()
                 else:
-                    return JsonResponse({"error": serializer.errors}, status=400)
+                    return make_error_json_response(serializer.errors, 400)
             else:
-                return JsonResponse({"message": "No new check-in record to add"}, status=200)
+                return make_success_json_response("No new check-in record to add", 200)
 
-        return JsonResponse({"message": "Check-in confirmed successfully"}, status=201)
+        return make_success_json_response("Check-in confirmed successfully", 201)
 
     except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
+        return make_error_json_response("Invalid JSON", 400)
     except Exception as e:
-        return JsonResponse({"error": f"An unexpected error occurred: {e}"}, status=500)
+        return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
 def get_attended_students(request):
     attended_today = Attendance.objects.filter(attendance_date=now().date())
@@ -111,16 +116,16 @@ def confirm(request):
             serializer = AttendanceSerializer(data=attendance_entries, many=True)
             if serializer.is_valid():
                 serializer.save()
-                return JsonResponse({"message": "Attendance confirmed successfully"}, status=201)
+                return make_success_json_response("Attendance confirmed successfully", 201)
             else:
-                return JsonResponse({"error": serializer.errors}, status=400)
+                return make_error_json_response(serializer.errors, 400)
         else:
             return JsonResponse({"message": "No new attendance records to add"}, status=200)
 
     except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
+        return make_error_json_response("Invalid JSON", 400)
     except Exception as e:
-        return JsonResponse({"error": f"An unexpected error occurred: {e}"}, status=500)
+        return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
 
 def report(request):
