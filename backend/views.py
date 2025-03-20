@@ -41,11 +41,43 @@ def student_list(request):
 
     return JsonResponse(response)
 
+@csrf_exempt
+@require_http_methods(["POST"])
 def check_in(request):
-    # Receive, parse and validate the request body
-    # Create a record in Attendance table
-    # Send response?
-    return HttpResponse("Check-in view")
+    try:
+        request_body = json.loads(request.body)
+        check_in_data = request_body.get("checkInData", {})
+
+        student_id = check_in_data.get("studentId")
+        classes_list = check_in_data.get("classesList")
+        today_date = check_in_data.get("todayDate")
+
+        if not student_id or not classes_list or not today_date:
+            return JsonResponse({"error": "Missing required fields"}, status=400)
+
+        for cls in classes_list:
+            if not Attendance.objects.filter(student_id=student_id, class_id=cls, attendance_date=today_date).exists():
+                data_to_write = {
+                    "student_id": student_id,
+                    "class_id": cls,
+                    "attendance_date": today_date,
+                }
+                print(f"Data to write: {data_to_write}")
+
+                serializer = AttendanceSerializer(data=data_to_write)
+                if serializer.is_valid():
+                    serializer.save()
+                else:
+                    return JsonResponse({"error": serializer.errors}, status=400)
+            else:
+                return JsonResponse({"message": "No new check-in record to add"}, status=200)
+
+        return JsonResponse({"message": "Check-in confirmed successfully"}, status=201)
+
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": f"An unexpected error occurred: {e}"}, status=500)
 
 def get_attended_students(request):
     attended_today = Attendance.objects.filter(attendance_date=now().date())
