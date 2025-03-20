@@ -47,6 +47,14 @@ def check_in(request):
     # Send response?
     return HttpResponse("Check-in view")
 
+def get_attended_students(request):
+    attended_today = Attendance.objects.filter(attendance_date=now().date())
+    serializer = AttendanceSerializer(attended_today, many=True)
+    response = {
+        "response": serializer.data
+    }
+    return JsonResponse(response)
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def confirm(request):
@@ -59,7 +67,7 @@ def confirm(request):
         for confirmation in confirmation_list:
             for student_id, classes_list in confirmation.items():
                 for cls_id, show_up in classes_list.items():
-                    if not Attendance.objects.filter(student_id=student_id, class_id=cls_id, attendance_date=now().date()).exists:
+                    if not Attendance.objects.filter(student_id=student_id, class_id=cls_id, attendance_date=now().date()).exists():
                         attendance_entries.append({
                             "student_id": student_id,
                             "class_id": cls_id,
