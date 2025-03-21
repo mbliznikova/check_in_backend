@@ -11,11 +11,11 @@ from django.utils.timezone import now
 from .models import ClassModel, Student, Day, Schedule, Attendance
 from .serializers import StudentSerializer, ClassModelSerializer, AttendanceSerializer
 
-def make_error_json_response(message, status_code):
-    return JsonResponse({"message": message}, status=status_code)
-
-def make_success_json_response(error_message, status_code):
+def make_error_json_response(error_message, status_code):
     return JsonResponse({"error": error_message}, status=status_code)
+
+def make_success_json_response(message, status_code):
+    return JsonResponse({"message": message}, status=status_code)
 
 def classes_list(request):
     today_name = datetime.today().strftime("%A")
@@ -50,34 +50,39 @@ def student_list(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def check_in(request):
+    # For now this view sreves for insertion and deletion entries to/from Attendance table since the data with classes
+    # a student attends to arrives complete every time, like a source of truth
     try:
         request_body = json.loads(request.body)
         check_in_data = request_body.get("checkInData", {})
-
         student_id = check_in_data.get("studentId")
         classes_list = check_in_data.get("classesList")
         today_date = check_in_data.get("todayDate")
 
-        if not student_id or not classes_list or not today_date:
+        if not student_id or not today_date:
             return make_error_json_response("Missing required fields", 400)
 
-        for cls in classes_list:
-            if not Attendance.objects.filter(student_id=student_id, class_id=cls, attendance_date=today_date).exists():
-                data_to_write = {
+        existing_classes = set(Attendance.objects.filter(student_id=student_id, attendance_date=today_date).values_list("class_id", flat=True))
+        classes_to_add = set(classes_list) - existing_classes
+        classes_to_delete = existing_classes - set(classes_list)
+
+        # Can reqrite to use Attendance.objects.create(), but then have to retrieve
+        # instant of Student by student_id and pass as a FK
+        for cls in classes_to_add:
+            data_to_write = {
                     "student_id": student_id,
                     "class_id": cls,
                     "attendance_date": today_date,
                 }
-
-                serializer = AttendanceSerializer(data=data_to_write)
-                if serializer.is_valid():
-                    serializer.save()
-                else:
-                    return make_error_json_response(serializer.errors, 400)
+            serializer = AttendanceSerializer(data=data_to_write)
+            if serializer.is_valid():
+                serializer.save()
             else:
-                return make_success_json_response("No new check-in record to add", 200)
+                return make_error_json_response(serializer.errors, 400)
 
-        return make_success_json_response("Check-in confirmed successfully", 201)
+        Attendance.objects.filter(student_id=student_id, attendance_date=today_date, class_id__in=classes_to_delete).delete()
+
+        return make_success_json_response("Check-in data was successfully updated", 200)
 
     except json.JSONDecodeError:
         return make_error_json_response("Invalid JSON", 400)
