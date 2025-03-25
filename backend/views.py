@@ -56,7 +56,7 @@ def check_in(request):
         request_body = json.loads(request.body)
         check_in_data = request_body.get("checkInData", {})
         student_id = check_in_data.get("studentId")
-        classes_list = check_in_data.get("classesList")
+        classes_list = check_in_data.get("classesList", [])
         today_date = check_in_data.get("todayDate")
 
         if not student_id or not today_date:
@@ -66,8 +66,8 @@ def check_in(request):
         classes_to_add = set(classes_list) - existing_classes
         classes_to_delete = existing_classes - set(classes_list)
 
-        # Can reqrite to use Attendance.objects.create(), but then have to retrieve
-        # instant of Student by student_id and pass as a FK
+        # Can rewrite to use Attendance.objects.create() instead of using serializer, but then have to retrieve
+        # instance of Student by student_id and pass as a FK
         for cls in classes_to_add:
             data_to_write = {
                     "student_id": student_id,
