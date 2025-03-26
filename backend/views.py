@@ -14,7 +14,9 @@ from .serializers import StudentSerializer, ClassModelSerializer, AttendanceSeri
 def make_error_json_response(error_message, status_code):
     return JsonResponse({"error": error_message}, status=status_code)
 
-def make_success_json_response(message, status_code):
+def make_success_json_response(status_code, message="Success", response_body=None):
+    if response_body:
+        return JsonResponse(response_body, status=status_code)
     return JsonResponse({"message": message}, status=status_code)
 
 def classes_list(request):
@@ -54,6 +56,7 @@ def check_in(request):
     # a student attends to arrives complete every time, like a source of truth
     try:
         request_body = json.loads(request.body)
+        # Check if body?
         check_in_data = request_body.get("checkInData", {})
         student_id = check_in_data.get("studentId")
         classes_list = check_in_data.get("classesList", [])
@@ -66,6 +69,8 @@ def check_in(request):
         classes_to_add = set(classes_list) - existing_classes
         classes_to_delete = existing_classes - set(classes_list)
 
+        classes_to_add_response, classes_to_delete_response = [], []
+
         # Can rewrite to use Attendance.objects.create() instead of using serializer, but then have to retrieve
         # instance of Student by student_id and pass as a FK
         for cls in classes_to_add:
@@ -77,12 +82,25 @@ def check_in(request):
             serializer = AttendanceSerializer(data=data_to_write)
             if serializer.is_valid():
                 serializer.save()
+                classes_to_add_response.append(cls)
             else:
                 return make_error_json_response(serializer.errors, 400)
 
-        Attendance.objects.filter(student_id=student_id, attendance_date=today_date, class_id__in=classes_to_delete).delete()
+        if classes_to_delete:
+            Attendance.objects.filter(student_id=student_id, attendance_date=today_date, class_id__in=classes_to_delete).delete()
 
-        return make_success_json_response("Check-in data was successfully updated", 200)
+            for cls in classes_to_delete:
+                classes_to_delete_response.append(cls)
+
+        response_dict = {
+                "message": "Check-in data was successfully updated",
+                "student_id": student_id,
+                "attendance_date": today_date,
+                "checked-in": classes_to_add_response,
+                "checked-out": classes_to_delete_response,
+        }
+
+        return make_success_json_response(200, response_body=response_dict)
 
     except json.JSONDecodeError:
         return make_error_json_response("Invalid JSON", 400)
@@ -102,6 +120,7 @@ def get_attended_students(request):
 def confirm(request):
     try:
         request_body = json.loads(request.body)
+        # Check if body?
         confirmation_list = request_body.get("confirmationList", [])
 
         attendance_entries = []
@@ -121,7 +140,7 @@ def confirm(request):
             serializer = AttendanceSerializer(data=attendance_entries, many=True)
             if serializer.is_valid():
                 serializer.save()
-                return make_success_json_response("Attendance confirmed successfully", 201)
+                return make_success_json_response(201, message="Attendance confirmed successfully")
             else:
                 return make_error_json_response(serializer.errors, 400)
         else:
