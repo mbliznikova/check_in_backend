@@ -13,6 +13,24 @@ class CheckInTestCase(TestCase):
         self.assertIn("message", response_data)
         self.assertEqual(response_data.get("message"), message)
 
+    def positive_response_content_helper(self, response, expected_checked_in_list=None, expected_checked_out_list=None):
+        response_data = json.loads(response.content)
+        self.assertIn("student_id", response_data)
+        self.assertEqual(response_data.get("student_id"), self.test_student.id)
+        self.assertIn("attendance_date", response_data)
+        self.assertEqual(response_data.get("attendance_date"), self.today)
+
+        if expected_checked_in_list:
+            print("expected_checked_in_list")
+            self.assertIn("checked-in", response_data)
+            self.assertEqual(len(response_data.get("checked-in")), len(expected_checked_in_list))
+            self.assertEqual(set(response_data.get("checked-in")), set(expected_checked_in_list))
+        if expected_checked_out_list:
+            self.assertIn("checked-out", response_data)
+            print("expected_checked_out_list")
+            self.assertEqual(len(response_data.get("checked-out")), len(expected_checked_out_list))
+            self.assertEqual(set(response_data.get("checked-out")), set(expected_checked_out_list))
+
     def setUp(self):
         self.test_student = Student.objects.create(first_name="John", last_name="Testovich")
         self.class_one = ClassModel.objects.create(name="Foil")
@@ -33,6 +51,7 @@ class CheckInTestCase(TestCase):
 
         response = self.client.post(self.check_in_url, json.dumps(request_data), content_type="application/json")
         self.positive_response_helper(response, 200, "Check-in data was successfully updated")
+        self.positive_response_content_helper(response=response, expected_checked_in_list=[self.class_one.id])
 
         attendance_record = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
         self.assertEqual(attendance_record.count(), 1)
@@ -48,6 +67,7 @@ class CheckInTestCase(TestCase):
 
         response = self.client.post(self.check_in_url, json.dumps(request_data), content_type="application/json")
         self.positive_response_helper(response, 200, "Check-in data was successfully updated")
+        self.positive_response_content_helper(response=response, expected_checked_in_list=[self.class_one.id, self.class_two.id])
 
         attendance_record = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
         self.assertEqual(attendance_record.count(), 2)
@@ -67,6 +87,7 @@ class CheckInTestCase(TestCase):
 
         response = self.client.post(self.check_in_url, json.dumps(request_data), content_type="application/json")
         self.positive_response_helper(response, 200, "Check-in data was successfully updated")
+        self.positive_response_content_helper(response=response, expected_checked_out_list=[self.class_one.id])
 
         attendance_final_record = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
         self.assertEqual(attendance_final_record.count(), 0)
@@ -87,6 +108,8 @@ class CheckInTestCase(TestCase):
 
         response = self.client.post(self.check_in_url, json.dumps(request_data), content_type="application/json")
         self.positive_response_helper(response, 200, "Check-in data was successfully updated")
+        self.positive_response_content_helper(response=response, expected_checked_in_list=[self.class_two.id], expected_checked_out_list=[self.class_one.id])
+
 
         attendance_final_record = list(Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today).values_list("class_id", flat=True))
         self.assertEqual(len(attendance_final_record), 1)
