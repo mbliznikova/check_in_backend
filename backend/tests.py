@@ -37,6 +37,21 @@ class CheckInTestCase(TestCase):
         attendance_record = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
         self.assertEqual(attendance_record.count(), 1)
 
+    def test_student_checks_in_multiple_classes(self):
+        request_data = {
+            "checkInData": {
+                "studentId": self.test_student.id,
+                "classesList": [self.class_one.id, self.class_two.id],
+                "todayDate": self.today,
+            }
+        }
+
+        response = self.client.post(self.check_in_url, json.dumps(request_data), content_type="application/json")
+        self.positive_response_helper(response, 200, "Check-in data was successfully updated")
+
+        attendance_record = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
+        self.assertEqual(attendance_record.count(), 2)
+
     def test_student_checks_out(self):
         Attendance.objects.create(student_id=self.test_student, class_id=self.class_one, attendance_date=self.today)
         attendance_initial_record = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
