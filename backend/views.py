@@ -92,7 +92,7 @@ def check_in(request):
             for cls in classes_to_delete:
                 classes_to_delete_response.append(cls)
 
-        response_dict = CaseSerializer.dict_to_camel_case(
+        response = CaseSerializer.dict_to_camel_case(
             {
                 "message": "Check-in data was successfully updated",
                 "student_id": student_id,
@@ -101,7 +101,7 @@ def check_in(request):
                 "checked_out": classes_to_delete_response,
             })
 
-        return make_success_json_response(200, response_body=response_dict)
+        return make_success_json_response(200, response_body=response)
 
     except json.JSONDecodeError:
         return make_error_json_response("Invalid JSON", 400)
@@ -110,11 +110,31 @@ def check_in(request):
 
 def get_attended_students(request):
     attended_today = Attendance.objects.filter(attendance_date=now().date())
-    serializer = AttendanceSerializer(attended_today, many=True)
-    response = {
-        "response": serializer.data
-    }
-    return JsonResponse(response)
+    student_class_ids = attended_today.values_list("student_id", "class_id")
+
+    student_classes = {}
+
+    for student_id, class_id in student_class_ids:
+        student_classes.setdefault(student_id, []).append(class_id)
+
+    students_attended_today = Student.objects.filter(id__in=student_classes.keys())
+
+    response = CaseSerializer.dict_to_camel_case(
+        {
+            "message": "Check-in data was successfully confirmed",
+            "confirmed_attendance":
+            [
+                CaseSerializer.dict_to_camel_case({
+                    "id": student.id,
+                    "first_name": student.first_name,
+                    "last_name": student.last_name,
+                    "classes": student_classes.get(student.id, []),
+                })
+                for student in students_attended_today
+            ]
+        })
+
+    return make_success_json_response(200, response_body=response)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -125,6 +145,14 @@ def confirm(request):
         confirmation_list = request_body.get("confirmationList", [])
 
         attendance_entries = []
+
+        # Check if there is an entry in db, but not in confirmation - then checked-in by mistake, delete (ONLY IF is_showed_up=True). Need a confirmation window?
+        # Distinction between checked-in and No Show (24 hours policy, still need a record) and checked in by mistake (doesn't need a record)
+
+        # If no difference in is_showed_up, then do nothing
+
+        # Check confirmation by students to delete (in Attendance table, but not in request) and students to update is_showed_up (in table and in request)
+        # So updating only the students who are both in table and request and have difference in is_showed_up, removing students who is in table, but not in request 
 
         for confirmation in confirmation_list:
             for student_id, classes_list in confirmation.items():
