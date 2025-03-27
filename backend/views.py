@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.timezone import now
 
 from .models import ClassModel, Student, Day, Schedule, Attendance
-from .serializers import StudentSerializer, ClassModelSerializer, AttendanceSerializer
+from .serializers import CaseSerializer, StudentSerializer, ClassModelSerializer, AttendanceSerializer
 
 def make_error_json_response(error_message, status_code):
     return JsonResponse({"error": error_message}, status=status_code)
@@ -92,13 +92,14 @@ def check_in(request):
             for cls in classes_to_delete:
                 classes_to_delete_response.append(cls)
 
-        response_dict = {
+        response_dict = CaseSerializer.dict_to_camel_case(
+            {
                 "message": "Check-in data was successfully updated",
                 "student_id": student_id,
                 "attendance_date": today_date,
-                "checked-in": classes_to_add_response,
-                "checked-out": classes_to_delete_response,
-        }
+                "checked_in": classes_to_add_response,
+                "checked_out": classes_to_delete_response,
+            })
 
         return make_success_json_response(200, response_body=response_dict)
 
