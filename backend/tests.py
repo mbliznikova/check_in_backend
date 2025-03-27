@@ -15,21 +15,21 @@ class CheckInTestCase(TestCase):
 
     def positive_response_content_helper(self, response, expected_checked_in_list=None, expected_checked_out_list=None):
         response_data = json.loads(response.content)
-        self.assertIn("student_id", response_data)
-        self.assertEqual(response_data.get("student_id"), self.test_student.id)
-        self.assertIn("attendance_date", response_data)
-        self.assertEqual(response_data.get("attendance_date"), self.today)
+        self.assertIn("studentId", response_data)
+        self.assertEqual(response_data.get("studentId"), self.test_student.id)
+        self.assertIn("attendanceDate", response_data)
+        self.assertEqual(response_data.get("attendanceDate"), self.today)
 
         if expected_checked_in_list:
             print("expected_checked_in_list")
-            self.assertIn("checked-in", response_data)
-            self.assertEqual(len(response_data.get("checked-in")), len(expected_checked_in_list))
-            self.assertEqual(set(response_data.get("checked-in")), set(expected_checked_in_list))
+            self.assertIn("checkedIn", response_data)
+            self.assertEqual(len(response_data.get("checkedIn")), len(expected_checked_in_list))
+            self.assertEqual(set(response_data.get("checkedIn")), set(expected_checked_in_list))
         if expected_checked_out_list:
-            self.assertIn("checked-out", response_data)
+            self.assertIn("checkedOut", response_data)
             print("expected_checked_out_list")
-            self.assertEqual(len(response_data.get("checked-out")), len(expected_checked_out_list))
-            self.assertEqual(set(response_data.get("checked-out")), set(expected_checked_out_list))
+            self.assertEqual(len(response_data.get("checkedOut")), len(expected_checked_out_list))
+            self.assertEqual(set(response_data.get("checkedOut")), set(expected_checked_out_list))
 
     def setUp(self):
         self.test_student = Student.objects.create(first_name="John", last_name="Testovich")

@@ -16,6 +16,10 @@ class CaseSerializer(serializers.ModelSerializer):
         # From dictionary of primitive datatypes (with camelCase keys) to dictionary with native values (with snake_keys)
         data = {self.camel_to_snake(key): value for key, value in data.items()}
         return super().to_internal_value(data)
+
+    @staticmethod
+    def dict_to_camel_case(dict_data):
+        return {CaseSerializer.snake_to_camel(key): value for key, value in dict_data.items()}
     
     @staticmethod
     def snake_to_camel(snake_str):
