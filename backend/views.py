@@ -137,43 +137,46 @@ def get_attended_students(request):
     return make_success_json_response(200, response_body=response)
 
 @csrf_exempt
-@require_http_methods(["POST"])
+@require_http_methods(["PUT"])
 def confirm(request):
     try:
+        attended_today = Attendance.objects.filter(attendance_date=now().date())
+
         request_body = json.loads(request.body)
         # Check if body?
+
+        confirmed_attendance = {}
+
         confirmation_list = request_body.get("confirmationList", [])
-
-        attendance_entries = []
-
-        # Check if there is an entry in db, but not in confirmation - then checked-in by mistake, delete (ONLY IF is_showed_up=True). Need a confirmation window?
-        # Distinction between checked-in and No Show (24 hours policy, still need a record) and checked in by mistake (doesn't need a record)
-
-        # If no difference in is_showed_up, then do nothing
-
-        # Check confirmation by students to delete (in Attendance table, but not in request) and students to update is_showed_up (in table and in request)
-        # So updating only the students who are both in table and request and have difference in is_showed_up, removing students who is in table, but not in request 
-
         for confirmation in confirmation_list:
-            for student_id, classes_list in confirmation.items():
-                for cls_id, show_up in classes_list.items():
-                    if not Attendance.objects.filter(student_id=student_id, class_id=cls_id, attendance_date=now().date()).exists():
-                        attendance_entries.append({
-                            "student_id": student_id,
-                            "class_id": cls_id,
-                            "attendance_date": now().date(),
-                            "is_showed_up": show_up,
-                        })
+            confirmed_attendance.update(confirmation)
 
-        if attendance_entries:
-            serializer = AttendanceSerializer(data=attendance_entries, many=True)
-            if serializer.is_valid():
-                serializer.save()
-                return make_success_json_response(201, message="Attendance confirmed successfully")
-            else:
-                return make_error_json_response(serializer.errors, 400)
-        else:
-            return JsonResponse({"message": "No new attendance records to add"}, status=200)
+        attendance_to_delete, attendance_to_update = [], []
+
+        for attendance in attended_today:
+            student_id = attendance.student_id.id
+            class_id = attendance.class_id.id
+            if student_id not in confirmed_attendance or class_id not in confirmed_attendance[student_id]:
+                attendance_to_delete.append(attendance.id)
+                continue
+            new_is_showed_up_value = confirmed_attendance[student_id][class_id]
+            if attendance.is_showed_up != new_is_showed_up_value:
+                attendance.is_showed_up = new_is_showed_up_value
+                attendance_to_update.append(attendance)
+
+        if attendance_to_delete:
+            Attendance.objects.filter(id__in=attendance_to_delete).delete()
+            print(f"Attendance to delete: {attendance_to_delete}")
+
+        if attendance_to_update:
+            Attendance.objects.bulk_update(attendance_to_update, ["is_showed_up"])
+            print(f"Attendance to update: {attendance_to_update}")
+
+        response = {
+            "message": "Attendance confirmed successfully"
+        }
+
+        return make_success_json_response(200, response_body=response)
 
     except json.JSONDecodeError:
         return make_error_json_response("Invalid JSON", 400)
