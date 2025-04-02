@@ -143,34 +143,45 @@ def confirm(request):
         attended_today = Attendance.objects.filter(attendance_date=now().date())
 
         request_body = json.loads(request.body)
-        # Check if body?
-
-        confirmed_attendance = {}
 
         confirmation_list = request_body.get("confirmationList", [])
+        if not isinstance(confirmation_list, list):
+            return make_error_json_response("Invalid data format: 'confirmationList' should be a list", 400)
+
+        confirmed_attendance = {}
         for confirmation in confirmation_list:
+            if not isinstance(confirmation, dict):
+                return make_error_json_response("Invalid data format: Each item in 'confirmationList' should be a dictionary", 400)
             confirmed_attendance.update(confirmation)
+
+        confirmed_attendance = {
+            int(student_id_key): {
+                    int(class_id_key): bool(value) for class_id_key, value in classes.items()
+                }
+                for student_id_key, classes in confirmed_attendance.items()
+            }
 
         attendance_to_delete, attendance_to_update = [], []
 
         for attendance in attended_today:
             student_id = attendance.student_id.id
             class_id = attendance.class_id.id
+
             if student_id not in confirmed_attendance or class_id not in confirmed_attendance[student_id]:
                 attendance_to_delete.append(attendance.id)
                 continue
-            new_is_showed_up_value = confirmed_attendance[student_id][class_id]
+
+            new_is_showed_up_value = confirmed_attendance.get(student_id, {}).get(class_id)
+
             if attendance.is_showed_up != new_is_showed_up_value:
                 attendance.is_showed_up = new_is_showed_up_value
                 attendance_to_update.append(attendance)
 
         if attendance_to_delete:
             Attendance.objects.filter(id__in=attendance_to_delete).delete()
-            print(f"Attendance to delete: {attendance_to_delete}")
 
         if attendance_to_update:
             Attendance.objects.bulk_update(attendance_to_update, ["is_showed_up"])
-            print(f"Attendance to update: {attendance_to_update}")
 
         response = {
             "message": "Attendance confirmed successfully"
