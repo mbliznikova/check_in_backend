@@ -137,3 +137,65 @@ class CheckInTestCase(TestCase):
         response_data = json.loads(response.content)
         self.assertIn("error", response_data)
         self.assertEqual(response_data.get("error"), "Invalid JSON")
+
+class ConfirmTestCase(TestCase):
+        def positive_response_helper(self, response, expected_status, message):
+            self.assertEqual(response.status_code, expected_status)
+            response_data = json.loads(response.content)
+            self.assertIn("message", response_data)
+            self.assertEqual(response_data.get("message"), message)
+
+        def setUp(self):
+            self.test_student = Student.objects.create(first_name="John", last_name="Testovich")
+            self.class_one = ClassModel.objects.create(name="Rapier and dagger")
+            self.class_two = ClassModel.objects.create(name="Self-defence")
+
+            self.today = now().date().isoformat()
+
+            self.attendance_one = Attendance.objects.create(student_id=self.test_student, class_id=self.class_one, attendance_date=self.today)
+            self.attendance_two = Attendance.objects.create(student_id=self.test_student, class_id=self.class_two, attendance_date=self.today)
+
+            self.confirm_url = reverse("confirm")
+
+        def test_student_confirmed(self):
+            request_data = {"confirmationList":[{self.test_student.id: {self.class_one.id: True, self.class_two.id: True}}]}
+            response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
+            self.positive_response_helper(response, 200, "Attendance confirmed successfully")
+            attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
+            self.assertEqual(len(attendance_records), 2)
+            self.assertIn(self.attendance_one, attendance_records)
+            self.assertIn(self.attendance_two, attendance_records)
+            for record in attendance_records:
+                self.assertEqual(record.is_showed_up, True)
+            # Nothing happens, because there is already record in Attandance table, nad is_showed_up is True by default
+
+        def test_student_unchecked_24_hrs_policy(self):
+            pass
+            # Student remains checked, but is_showed_up is False, the ntry remains in the table
+
+        def test_student_unchecked_no_24_hrs_policy(self):
+            pass
+            # Student is unchecked, the entry with student_id-class_is is removed from the table
+
+        def test_student_checked_one_class_and_unchecked_another_24_hrs_policy(self):
+            pass
+            # A student attended one class, but didn’t show up for another
+            # One entry to update
+
+        def test_student_checked_one_class_and_unchecked_another_no_24_hrs_policy(self):
+            pass
+            # A student attended one class, but didn’t show up for another
+            # One entry to delete
+
+        def test_student_unchecked_two_classes_one_24_hrs_policy(self):
+            pass
+            # One entry to delete, one entry to update
+
+        def test_invalid_json(self):
+            pass
+
+        def test_invalid_data_format_confirmation_list_is_no_list(self):
+            pass
+
+        def test_invalid_data_format_no_dicts_in_confirmation_list(self):
+            pass
