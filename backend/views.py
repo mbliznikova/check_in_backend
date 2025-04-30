@@ -194,6 +194,15 @@ def confirm(request):
     except Exception as e:
         return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
+def attendance_list(request):
+    attendances = Attendance.objects.all()
+    serializer = AttendanceSerializer(attendances, many=True)
+
+    response = {
+        "response": serializer.data
+    }
+
+    return JsonResponse(response)
 
 def report(request):
     return HttpResponse("Report view")
