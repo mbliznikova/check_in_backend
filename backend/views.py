@@ -120,6 +120,7 @@ def get_attended_students(request):
     students_attended_today = Student.objects.filter(id__in=student_classes.keys())
 
     response = CaseSerializer.dict_to_camel_case(
+        # TODO: check the message here and in FE
         {
             "message": "Check-in data was successfully confirmed",
             "confirmed_attendance":
@@ -196,13 +197,48 @@ def confirm(request):
 
 def attendance_list(request):
     attendances = Attendance.objects.all()
-    serializer = AttendanceSerializer(attendances, many=True)
+
+    attendance_dict = {}
+
+    for att in attendances:
+        str_date = att.attendance_date.isoformat()
+        str_class_id = str(att.class_id.id)
+        str_class_name = str(att.class_id.name)
+        str_student_id = str(att.student_id.id)
+        str_student_first_name = str(att.student_id.first_name)
+        str_student_last_name = str(att.student_id.last_name)
+
+        if str_date not in attendance_dict:
+            attendance_dict[str_date] = {}
+
+        if str_class_id not in attendance_dict[str_date]:
+           attendance_dict[str_date][str_class_id] = {
+               "name": str_class_name,
+               "students": {}
+           }
+
+        attendance_dict[str_date][str_class_id]["students"][str_student_id] = {
+            "first_name": str_student_first_name,
+            "last_name": str_student_last_name,
+            "is_showed_up": att.is_showed_up
+        }
+
+    # TODO: Write tests
+
+    result_list = []
+    for date, class_data in attendance_dict.items():
+        result_list.append(
+            CaseSerializer.dict_to_camel_case({
+                "date": date,
+                "classes": class_data,
+            })
+        )
 
     response = {
-        "response": serializer.data
+        "response": result_list
     }
 
-    return JsonResponse(response)
+    return make_success_json_response(200, response_body=response)
 
 def report(request):
     return HttpResponse("Report view")
