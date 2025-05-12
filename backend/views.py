@@ -141,6 +141,7 @@ def get_attended_students(request):
 @require_http_methods(["PUT"])
 def confirm(request):
     try:
+        # TODO: add the date parameter, so a teacher can confirm for any date
         attended_today = Attendance.objects.filter(attendance_date=now().date())
 
         request_body = json.loads(request.body)
@@ -217,11 +218,11 @@ def attendance_list(request):
                "students": {}
            }
 
-        attendance_dict[str_date][str_class_id]["students"][str_student_id] = {
+        attendance_dict[str_date][str_class_id]["students"][str_student_id] = CaseSerializer.dict_to_camel_case({
             "first_name": str_student_first_name,
             "last_name": str_student_last_name,
             "is_showed_up": att.is_showed_up
-        }
+        })
 
     # TODO: Write tests
 
