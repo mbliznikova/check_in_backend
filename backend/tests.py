@@ -1,5 +1,7 @@
 import json
 
+from datetime import datetime
+
 from django.test import TestCase
 from django.urls import reverse
 from django.utils.timezone import now
@@ -149,13 +151,51 @@ class ConfirmTestCase(TestCase):
             self.test_student = Student.objects.create(first_name="John", last_name="Testovich")
             self.class_one = ClassModel.objects.create(name="Rapier and dagger")
             self.class_two = ClassModel.objects.create(name="Self-defence")
+            self.class_three = ClassModel.objects.create(name="Longsword")
 
             self.today = now().date().isoformat()
+            self.another_date = datetime(2025, 5, 13).date()
 
             self.attendance_one = Attendance.objects.create(student_id=self.test_student, class_id=self.class_one, attendance_date=self.today)
             self.attendance_two = Attendance.objects.create(student_id=self.test_student, class_id=self.class_two, attendance_date=self.today)
+            self.attendance_three = Attendance.objects.create(student_id=self.test_student, class_id=self.class_three, attendance_date=self.another_date)
 
             self.confirm_url = reverse("confirm")
+
+        def test_student_checked_not_today_datetime(self):
+            request_data = {
+                "confirmationList": [
+                        {self.test_student.id: {
+                            self.class_three.id: True
+                        }}
+                    ],
+                "date": "2025-05-13",
+            }
+
+            response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
+            self.positive_response_helper(response, 200, "Attendance confirmed successfully")
+
+            attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.another_date)
+            self.assertEqual(len(attendance_records), 1)
+            self.assertIn(self.attendance_three, attendance_records)
+            self.assertEqual(attendance_records[0].attendance_date, self.another_date)
+
+        def test_student_checked_no_datetime_provided(self):
+            request_data = {
+                "confirmationList": [
+                        {self.test_student.id: {
+                            self.class_one.id: True
+                        }}
+                    ],
+            }
+
+            response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
+            self.positive_response_helper(response, 200, "Attendance confirmed successfully")
+
+            attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
+            self.assertEqual(len(attendance_records), 1)
+            self.assertIn(self.attendance_one, attendance_records)
+            self.assertEqual(attendance_records[0].attendance_date.isoformat(), self.today)
 
         def test_student_checked_confirmed(self):
             request_data = {

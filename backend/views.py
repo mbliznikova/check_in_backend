@@ -141,12 +141,14 @@ def get_attended_students(request):
 @require_http_methods(["PUT"])
 def confirm(request):
     try:
-        # TODO: add the date parameter, so a teacher can confirm for any date
-        attended_today = Attendance.objects.filter(attendance_date=now().date())
-
         request_body = json.loads(request.body)
 
         confirmation_list = request_body.get("confirmationList", [])
+        # TODO: what would be the default today_date value?
+        confirmation_day = request_body.get("date", now().date())
+
+        attended_today = Attendance.objects.filter(attendance_date=confirmation_day)
+
         if not isinstance(confirmation_list, list):
             return make_error_json_response("Invalid data format: 'confirmationList' should be a list", 400)
 
