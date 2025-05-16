@@ -197,7 +197,7 @@ def confirm(request):
         return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
 def attendance_list(request):
-    attendances = Attendance.objects.all()
+    attendances = Attendance.objects.all().order_by("-attendance_date")
 
     attendance_dict = {}
 
