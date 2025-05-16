@@ -120,9 +120,7 @@ def get_attended_students(request):
     students_attended_today = Student.objects.filter(id__in=student_classes.keys())
 
     response = CaseSerializer.dict_to_camel_case(
-        # TODO: check the message here and in FE
         {
-            "message": "Check-in data was successfully confirmed",
             "confirmed_attendance":
             [
                 CaseSerializer.dict_to_camel_case({
