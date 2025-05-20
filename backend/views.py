@@ -197,7 +197,24 @@ def confirm(request):
         return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
 def attendance_list(request):
-    attendances = Attendance.objects.all().order_by("-attendance_date")
+    request_month = request.GET.get("month")
+    request_year = request.GET.get("year")
+
+    attendances = None
+
+    if request_month and request_year:
+        try:
+            request_month = int(request_month)
+            request_year = int(request_year)
+            attendances = Attendance.objects.all().order_by("-attendance_date").filter(
+                attendance_date__month=request_month,
+                attendance_date__year=request_year
+            )
+            print(attendances)
+        except ValueError:
+            return make_error_json_response("Invalid month or year", 400)
+    else:
+        attendances = Attendance.objects.all().order_by("-attendance_date")
 
     attendance_dict = {}
 
