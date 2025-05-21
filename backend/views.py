@@ -210,7 +210,6 @@ def attendance_list(request):
                 attendance_date__month=request_month,
                 attendance_date__year=request_year
             )
-            print(attendances)
         except ValueError:
             return make_error_json_response("Invalid month or year", 400)
     else:
