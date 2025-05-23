@@ -206,6 +206,14 @@ def attendance_list(request):
         try:
             request_month = int(request_month)
             request_year = int(request_year)
+
+            if not (1 <= request_month <= 12):
+                return make_error_json_response(f"Month must be between 1 and 12, not {request_month}", 400)
+
+            # TODO: think about acceptable year range
+            if not (2000 <= request_year <= now().year + 1):
+                return make_error_json_response(f"Invalid year: {request_year}", 400)
+
             attendances = Attendance.objects.all().order_by("-attendance_date").filter(
                 attendance_date__month=request_month,
                 attendance_date__year=request_year
