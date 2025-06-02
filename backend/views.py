@@ -207,6 +207,8 @@ def attendance_list(request):
             request_month = int(request_month)
             request_year = int(request_year)
 
+            # TODO: add tests
+
             if not (1 <= request_month <= 12):
                 return make_error_json_response(f"Month must be between 1 and 12, not {request_month}", 400)
 
@@ -265,5 +267,11 @@ def attendance_list(request):
 
     return make_success_json_response(200, response_body=response)
 
-def report(request):
-    return HttpResponse("Report view")
+def prices_list(request):
+    pass
+
+def payments_list(request):
+    pass
+
+def payment_summary(request):
+    pass
