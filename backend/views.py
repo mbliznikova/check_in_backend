@@ -2,6 +2,7 @@ import json
 
 from datetime import datetime
 
+from django.db.models import Sum
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_http_methods
@@ -9,7 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.timezone import now
 
 from .models import ClassModel, Student, Day, Schedule, Attendance, Price, Payment
-from .serializers import CaseSerializer, StudentSerializer, ClassModelSerializer, AttendanceSerializer, PaymentSerializer
+from .serializers import CaseSerializer, StudentSerializer, ClassModelSerializer, AttendanceSerializer, PaymentSerializer, MonthlyPaymentsSummary
 
 def make_error_json_response(error_message, status_code):
     return JsonResponse({"error": error_message}, status=status_code)
@@ -291,4 +292,25 @@ def payments_list(request):
     return make_success_json_response(200, response_body=response)
 
 def payment_summary(request):
-    pass
+    # By default returns for the current month (for now)
+    # Should I calculate it from payments? Every time or by a separate request only?
+    # If there is an existing entry - compare and recalculate if needed
+    payment_summary = Payment.objects.filter(
+        payment_date__year = now().year,
+        payment_date__month = now().month
+    )
+
+    new_summary = payment_summary.aggregate(Sum('amount'))['amount__sum'] or 0.0
+
+    # TODO: handle logic to add new entry for MonthlyPaymentsSummary or update the existing one
+    # if new_summary != old_summary or not old_summary:
+    old_summary = MonthlyPaymentsSummary.objects.filter(
+        summary_date__year = now().year,
+        summary_date__month = now().month
+    )
+
+    response = {
+        "response": new_summary
+    }
+
+    return make_success_json_response(200, response_body=response)
