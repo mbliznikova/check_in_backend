@@ -43,11 +43,27 @@ class Attendance(models.Model):
     is_showed_up = models.BooleanField(default=True)
 
     class Meta:
+        # Make it unique for day-month-year?
         unique_together = ("student_id", "class_id", "attendance_date")
 
-class Payments(models.Model):
+class Payment(models.Model):
     id = models.AutoField(primary_key=True)
     student_id = models.ForeignKey(Student, on_delete=models.CASCADE)
     class_id = models.ForeignKey(ClassModel, on_delete=models.CASCADE)
     amount = models.FloatField()
     payment_date = models.DateTimeField(default=timezone.now)
+
+class Price(models.Model):
+    id = models.AutoField(primary_key=True)
+    class_id = models.ForeignKey(ClassModel, on_delete=models.CASCADE)
+    amount = models.FloatField()
+
+class MonthlyPaymentsSummary(models.Model):
+    id = models.AutoField(primary_key=True)
+    summary_date = models.DateField(help_text="Only the month and year are meaningful. Day will always be set to 1.")
+    amount = models.FloatField()
+
+    def save(self, *args, **kwargs):
+        if self.summary_date:
+            self.summary_date = self.summary_date.replace(day=1)
+        super().save(*args, **kwargs)
