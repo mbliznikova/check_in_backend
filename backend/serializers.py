@@ -1,7 +1,7 @@
 import re
 
 from rest_framework import serializers
-from .models import Student, ClassModel, Day, Schedule, Attendance, Payments
+from .models import Student, ClassModel, Day, Schedule, Attendance, Payment
 
 class CaseSerializer(serializers.ModelSerializer):
     """
@@ -57,5 +57,5 @@ class AttendanceSerializer(CaseSerializer):
 
 class PaymentsSerializer(CaseSerializer):
     class Meta:
-        model = Payments
+        model = Payment
         fields = '__all__'
