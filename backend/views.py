@@ -8,8 +8,8 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.timezone import now
 
-from .models import ClassModel, Student, Day, Schedule, Attendance, Price
-from .serializers import CaseSerializer, StudentSerializer, ClassModelSerializer, AttendanceSerializer, PriceSerializer
+from .models import ClassModel, Student, Day, Schedule, Attendance, Price, Payment
+from .serializers import CaseSerializer, StudentSerializer, ClassModelSerializer, AttendanceSerializer, PaymentSerializer
 
 def make_error_json_response(error_message, status_code):
     return JsonResponse({"error": error_message}, status=status_code)
@@ -281,7 +281,14 @@ def prices_list(request):
     return make_success_json_response(200, response_body=response)
 
 def payments_list(request):
-    pass
+    payments = Payment.objects.all()
+    serializer = PaymentSerializer(payments, many=True)
+
+    response = {
+        "response": serializer.data
+    }
+
+    return make_success_json_response(200, response_body=response)
 
 def payment_summary(request):
     pass
