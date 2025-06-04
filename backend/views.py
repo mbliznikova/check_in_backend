@@ -300,7 +300,7 @@ def payment_summary(request):
         payment_date__month = now().month
     )
 
-    new_summary = payment_summary.aggregate(Sum('amount'))['amount__sum'] or 0.0
+    new_summary = payment_summary.aggregate(Sum("amount"))["amount__sum"] or 0.0
 
     # TODO: handle logic to add new entry for MonthlyPaymentsSummary or update the existing one
     # if new_summary != old_summary or not old_summary:
@@ -309,8 +309,10 @@ def payment_summary(request):
         summary_date__month = now().month
     )
 
+    summary = {"summary": new_summary}
+
     response = {
-        "response": new_summary
+        "response": summary
     }
 
     return make_success_json_response(200, response_body=response)
