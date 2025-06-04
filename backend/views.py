@@ -273,7 +273,7 @@ def prices_list(request):
 
     price_dict = {}
     for price in prices:
-        price_dict[str(price.class_id.id)] = price.amount
+        price_dict[str(price.class_id.id)] = {price.class_id.name: price.amount}
 
     response = {
         "response": price_dict
