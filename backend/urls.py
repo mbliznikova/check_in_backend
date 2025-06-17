@@ -11,6 +11,6 @@ urlpatterns = [
     path("students/", views.student_list, name="students"),
     path("attended_sudents/", views.get_attended_students, name="attended_sudents"),
     path("prices/", views.prices_list, name="prices"),
-    path("payments/", views.payments_list, name="payments"),
+    path("payments/", views.payments, name="payments"),
     path("payment_summary/", views.payment_summary, name="payment_summary"),
 ]

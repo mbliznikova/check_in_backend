@@ -281,7 +281,7 @@ def prices_list(request):
 
     return make_success_json_response(200, response_body=response)
 
-def payments_list(request):
+def payments(request):
     payments = Payment.objects.all()
     serializer = PaymentSerializer(payments, many=True)
 
