@@ -65,7 +65,7 @@ class Payment(models.Model):
     student_name = models.CharField(max_length=50, blank=True)
     class_name = models.CharField(max_length=50, blank=True)
     amount = models.FloatField()
-    payment_date = models.DateTimeField(default=datetime.date.today)
+    payment_date = models.DateTimeField(default=datetime.datetime.now)
 
     def save(self, *args, **kwargs):
         if self.student_id and not self.student_name:
