@@ -8,6 +8,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.timezone import now
+from django.utils.dateparse import parse_datetime
 
 from .models import ClassModel, Student, Day, Schedule, Attendance, Price, Payment
 from .serializers import CaseSerializer, StudentSerializer, ClassModelSerializer, AttendanceSerializer, PaymentSerializer, MonthlyPaymentsSummary
@@ -66,6 +67,7 @@ def check_in(request):
         if not student_id or not today_date:
             return make_error_json_response("Missing required fields", 400)
 
+        # TODO: add parsing for today_date
         existing_classes = set(Attendance.objects.filter(student_id=student_id, attendance_date=today_date).values_list("class_id", flat=True))
         classes_to_add = set(classes_list) - existing_classes
         classes_to_delete = existing_classes - set(classes_list)
@@ -281,15 +283,86 @@ def prices_list(request):
 
     return make_success_json_response(200, response_body=response)
 
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
 def payments(request):
-    payments = Payment.objects.all()
-    serializer = PaymentSerializer(payments, many=True)
+    if request.method == "GET":
+        payments = Payment.objects.all()
+        serializer = PaymentSerializer(payments, many=True)
 
-    response = {
-        "response": serializer.data
-    }
+        response = {
+            "response": serializer.data
+        }
 
-    return make_success_json_response(200, response_body=response)
+        return make_success_json_response(200, response_body=response)
+
+    if request.method == "POST":
+        try:
+            request_body = json.loads(request.body)
+            payment_data = request_body.get("paymentData", {})
+            student_id = payment_data.get("studentId")
+            class_id = payment_data.get("classId")
+            student_name = payment_data.get("studentName")
+            class_name = payment_data.get("className")
+            amount = payment_data.get("amount")
+            payment_date_str = payment_data.get("paymentDate")
+
+            if not student_id or not class_id or not amount:
+                return make_error_json_response("Missing required fields", 400)
+
+            if not student_name:
+                try:
+                    student = Student.objects.get(id=student_id)
+                    student_name = f"{student.first_name} {student.last_name}"
+                except Student.DoesNotExist:
+                    return make_error_json_response("Student not found", 404)
+
+            if not class_name:
+                try:
+                    cls = ClassModel.objects.get(id=class_id)
+                    class_name = f"{cls.name}"
+                except Student.DoesNotExist:
+                    return make_error_json_response("Class not found", 404)
+
+            payment_date = parse_datetime(payment_date_str) if payment_date_str else None
+
+            if payment_date is None and payment_date_str:
+                return make_error_json_response("Invalid datetime format", 400)
+
+            data_to_write = {
+                "student_id": student_id,
+                "class_id": class_id,
+                "student_name": student_name,
+                "class_name": class_name,
+                "amount": amount,
+            }
+
+            if payment_date:
+                data_to_write["payment_date"] = payment_date
+
+            serializer = PaymentSerializer(data=data_to_write)
+
+            if serializer.is_valid():
+                serializer.save()
+            else:
+                return make_error_json_response(serializer.errors, 400)
+
+            response = PaymentSerializer.dict_to_camel_case(
+                {
+                    "message": "Payment was successfully created",
+                    "student_id": student_id,
+                    "class_id": class_id,
+                    "student_name": student_name,
+                    "class_name": class_name,
+                    "amount": amount,
+                }
+            )
+            return make_success_json_response(200, response_body=response)
+
+        except json.JSONDecodeError:
+            return make_error_json_response("Invalid JSON", 400)
+
+        # TODO: Write tests
 
 def payment_summary(request):
     # By default returns for the current month (for now)
