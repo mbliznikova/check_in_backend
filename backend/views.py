@@ -7,7 +7,7 @@ from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.utils.timezone import now
+from django.utils.timezone import now, is_naive, make_aware
 from django.utils.dateparse import parse_datetime
 
 from .models import ClassModel, Student, Day, Schedule, Attendance, Price, Payment
@@ -329,6 +329,10 @@ def payments(request):
             if payment_date is None and payment_date_str:
                 return make_error_json_response("Invalid datetime format", 400)
 
+            # TODO: handle time zones?
+            if payment_date and is_naive(payment_date):
+                payment_date = make_aware(payment_date)
+
             data_to_write = {
                 "student_id": student_id,
                 "class_id": class_id,
@@ -343,20 +347,23 @@ def payments(request):
             serializer = PaymentSerializer(data=data_to_write)
 
             if serializer.is_valid():
-                serializer.save()
+                saved_payment = serializer.save()
             else:
                 return make_error_json_response(serializer.errors, 400)
 
             response = PaymentSerializer.dict_to_camel_case(
                 {
                     "message": "Payment was successfully created",
-                    "student_id": student_id,
-                    "class_id": class_id,
-                    "student_name": student_name,
-                    "class_name": class_name,
-                    "amount": amount,
+                    "payment_id": saved_payment.id,
+                    "student_id": saved_payment.student_id.id if saved_payment.student_id else None,
+                    "class_id": saved_payment.class_id.id if saved_payment.class_id else None,
+                    "student_name": saved_payment.student_name,
+                    "class_name": saved_payment.class_name,
+                    "amount": saved_payment.amount,
+                    "payment_date": saved_payment.payment_date.isoformat(),
                 }
             )
+
             return make_success_json_response(200, response_body=response)
 
         except json.JSONDecodeError:
