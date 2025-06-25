@@ -381,6 +381,17 @@ class PaymentTestCase(TestCase):
         response_data = json.loads(response.content)
         return response_data
 
+    def base_positive_validation(self, request_data):
+        response = self.client.post(self.payments_url, json.dumps(request_data), content_type="application/json")
+        self.positive_response_helper(response, 200, "Payment was successfully created")
+
+        response_data = self.get_response_data_helper(response)
+        self.base_positive_response_content_helper(response_data)
+        self.additional_positive_response_content_helper(response_data)
+
+        payment_record_id = Payment.objects.get(id=response_data.get("paymentId"))
+        self.assertEqual(payment_record_id.id, response_data.get("paymentId"))
+
     def setUp(self):
         self.test_student = Student.objects.create(first_name="John", last_name="Testovich")
         self.class_one = ClassModel.objects.create(name="Foil")
@@ -401,12 +412,32 @@ class PaymentTestCase(TestCase):
             }
         }
 
-        response = self.client.post(self.payments_url, json.dumps(request_data), content_type="application/json")
-        self.positive_response_helper(response, 200, "Payment was successfully created")
+        self.base_positive_validation(request_data)
 
-        response_data = self.get_response_data_helper(response)
-        self.base_positive_response_content_helper(response_data)
-        self.additional_positive_response_content_helper(response_data)
+    def test_successful_payment_made_no_student_name(self):
+        request_data = {
+            "paymentData": {
+                "studentId": self.test_student.id,
+                "classId": self.class_one.id,
+                "studentName": "",
+                "className": "Foil",
+                "amount": 50.0,
+                "paymentDate": self.today,
+            }
+        }
 
-        payment_record_id = Payment.objects.get(id=response_data.get("paymentId"))
-        self.assertEqual(payment_record_id.id, response_data.get("paymentId"))
+        self.base_positive_validation(request_data)
+
+    def test_successful_payment_made_no_class_name(self):
+        request_data = {
+            "paymentData": {
+                "studentId": self.test_student.id,
+                "classId": self.class_one.id,
+                "studentName": "John Testovich",
+                "className": "",
+                "amount": 50.0,
+                "paymentDate": self.today,
+            }
+        }
+
+        self.base_positive_validation(request_data)
