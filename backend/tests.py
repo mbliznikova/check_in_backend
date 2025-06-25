@@ -352,8 +352,7 @@ class PaymentTestCase(TestCase):
         self.assertIn("message", response_data)
         self.assertEqual(response_data.get("message"), message)
 
-    def positive_response_content_helper(self, response):
-        response_data = self.get_response_data_helper(response=response)
+    def base_positive_response_content_helper(self, response_data):
         self.assertIn("paymentId", response_data)
 
         self.assertIn("studentId", response_data)
@@ -362,6 +361,10 @@ class PaymentTestCase(TestCase):
         self.assertIn("classId", response_data)
         self.assertEqual(response_data.get("studentId"), self.class_one.id)
 
+        self.assertIn("amount", response_data)
+        self.assertTrue(isinstance, response_data.get("amount"))
+
+    def additional_positive_response_content_helper(self, response_data):
         self.assertIn("studentName", response_data)
         student_name = f"{self.test_student.first_name} {self.test_student.last_name}"
         self.assertEqual(response_data.get("studentName"), student_name)
@@ -369,9 +372,6 @@ class PaymentTestCase(TestCase):
         self.assertIn("className", response_data)
         class_name = self.class_one.name
         self.assertEqual(response_data.get("className"), class_name)
-
-        self.assertIn("amount", response_data)
-        self.assertTrue(isinstance, response_data.get("amount"))
 
         # TODO: find out why BE returns the first day of the month, i.e. 2025-06-01T22:10:57.529161+00:00
         self.assertIn("paymentDate", response_data)
@@ -403,9 +403,10 @@ class PaymentTestCase(TestCase):
 
         response = self.client.post(self.payments_url, json.dumps(request_data), content_type="application/json")
         self.positive_response_helper(response, 200, "Payment was successfully created")
-        self.positive_response_content_helper(response=response)
 
         response_data = self.get_response_data_helper(response)
+        self.base_positive_response_content_helper(response_data)
+        self.additional_positive_response_content_helper(response_data)
 
         payment_record_id = Payment.objects.get(id=response_data.get("paymentId"))
         self.assertEqual(payment_record_id.id, response_data.get("paymentId"))
