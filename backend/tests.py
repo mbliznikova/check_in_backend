@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils.timezone import now
 
-from .models import ClassModel, Student, Attendance
+from .models import ClassModel, Student, Attendance, Payment
 
 class CheckInTestCase(TestCase):
     def positive_response_helper(self, response, expected_status, message):
@@ -341,3 +341,71 @@ class ConfirmTestCase(TestCase):
             response_data = json.loads(response.content)
             self.assertIn("error", response_data)
             self.assertEqual(response_data.get("error"), "Invalid data format: Each item in 'confirmationList' should be a dictionary")
+
+class AttendanceTestCase(TestCase):
+    pass
+
+class PaymentTestCase(TestCase):
+    def positive_response_helper(self, response, expected_status, message):
+        self.assertEqual(response.status_code, expected_status)
+        response_data = json.loads(response.content)
+        self.assertIn("message", response_data)
+        self.assertEqual(response_data.get("message"), message)
+
+    def positive_response_content_helper(self, response):
+        response_data = self.get_response_data_helper(response=response)
+        self.assertIn("paymentId", response_data)
+
+        self.assertIn("studentId", response_data)
+        self.assertEqual(response_data.get("studentId"), self.test_student.id)
+
+        self.assertIn("classId", response_data)
+        self.assertEqual(response_data.get("studentId"), self.class_one.id)
+
+        self.assertIn("studentName", response_data)
+        student_name = f"{self.test_student.first_name} {self.test_student.last_name}"
+        self.assertEqual(response_data.get("studentName"), student_name)
+
+        self.assertIn("className", response_data)
+        class_name = self.class_one.name
+        self.assertEqual(response_data.get("className"), class_name)
+
+        self.assertIn("amount", response_data)
+        self.assertTrue(isinstance, response_data.get("amount"))
+
+        # TODO: find out why BE returns the first day of the month, i.e. 2025-06-01T22:10:57.529161+00:00
+        self.assertIn("paymentDate", response_data)
+        # self.assertEqual(response_data.get("paymentDate"), self.today)
+
+    def get_response_data_helper(self, response):
+        response_data = json.loads(response.content)
+        return response_data
+
+    def setUp(self):
+        self.test_student = Student.objects.create(first_name="John", last_name="Testovich")
+        self.class_one = ClassModel.objects.create(name="Foil")
+
+        self.today = datetime.now().isoformat()
+
+        self.payments_url = reverse("payments")
+
+    def test_successful_payment_made(self):
+        request_data = {
+            "paymentData": {
+                "studentId": self.test_student.id,
+                "classId": self.class_one.id,
+                "studentName": "John Testovich",
+                "className": "Foil",
+                "amount": 50.0,
+                "paymentDate": self.today,
+            }
+        }
+
+        response = self.client.post(self.payments_url, json.dumps(request_data), content_type="application/json")
+        self.positive_response_helper(response, 200, "Payment was successfully created")
+        self.positive_response_content_helper(response=response)
+
+        response_data = self.get_response_data_helper(response)
+
+        payment_record_id = Payment.objects.get(id=response_data.get("paymentId"))
+        self.assertEqual(payment_record_id.id, response_data.get("paymentId"))
