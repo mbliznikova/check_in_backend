@@ -441,3 +441,23 @@ class PaymentTestCase(TestCase):
         }
 
         self.base_positive_validation(request_data)
+
+    def test_payment_missing_student_id(self):
+        request_data = {
+            "paymentData": {
+                "studentId": None,
+                "classId": self.class_one.id,
+                "studentName": "John Testovich",
+                "className": "",
+                "amount": 50.0,
+                "paymentDate": self.today,
+            }
+        }
+
+        response = self.client.post(self.payments_url, json.dumps(request_data), content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+
+        response_data = self.get_response_data_helper(response)
+        self.assertIn("error", response_data)
+        self.assertEqual(response_data.get("error"), "Missing required fields")
+
