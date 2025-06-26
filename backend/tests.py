@@ -455,7 +455,7 @@ class PaymentTestCase(TestCase):
 
         self.base_positive_validation(request_data)
 
-    def test_payment_missing_student_id(self):
+    def test_invalid_payment_missing_student_id(self):
         request_data = {
             "paymentData": {
                 "studentId": None,
@@ -474,7 +474,7 @@ class PaymentTestCase(TestCase):
         self.assertIn("error", response_data)
         self.assertEqual(response_data.get("error"), "Missing required fields")
 
-    def test_payment_missing_class_id(self):
+    def test_invalid_payment_missing_class_id(self):
         request_data = {
             "paymentData": {
                 "studentId": self.test_student.id,
@@ -492,3 +492,22 @@ class PaymentTestCase(TestCase):
         response_data = self.get_response_data_helper(response)
         self.assertIn("error", response_data)
         self.assertEqual(response_data.get("error"), "Missing required fields")
+
+    def test_invalid_payment_invalid_datetime_format(self):
+        request_data = {
+            "paymentData": {
+                "studentId": self.test_student.id,
+                "classId": self.class_one.id,
+                "studentName": "John Testovich",
+                "className": "",
+                "amount": 50.0,
+                "paymentDate": "2025/02/01",
+            }
+        }
+
+        response = self.client.post(self.payments_url, json.dumps(request_data), content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+
+        response_data = self.get_response_data_helper(response)
+        self.assertIn("error", response_data)
+        self.assertEqual(response_data.get("error"), "Invalid datetime format")
