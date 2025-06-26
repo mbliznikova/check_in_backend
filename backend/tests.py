@@ -23,13 +23,11 @@ class CheckInTestCase(TestCase):
         self.assertEqual(response_data.get("attendanceDate"), self.today)
 
         if expected_checked_in_list:
-            print("expected_checked_in_list")
             self.assertIn("checkedIn", response_data)
             self.assertEqual(len(response_data.get("checkedIn")), len(expected_checked_in_list))
             self.assertEqual(set(response_data.get("checkedIn")), set(expected_checked_in_list))
         if expected_checked_out_list:
             self.assertIn("checkedOut", response_data)
-            print("expected_checked_out_list")
             self.assertEqual(len(response_data.get("checkedOut")), len(expected_checked_out_list))
             self.assertEqual(set(response_data.get("checkedOut")), set(expected_checked_out_list))
 
@@ -373,9 +371,11 @@ class PaymentTestCase(TestCase):
         class_name = self.class_one.name
         self.assertEqual(response_data.get("className"), class_name)
 
-        # TODO: find out why BE returns the first day of the month, i.e. 2025-06-01T22:10:57.529161+00:00
         self.assertIn("paymentDate", response_data)
-        # self.assertEqual(response_data.get("paymentDate"), self.today)
+        payment_date = datetime.fromisoformat(response_data.get("paymentDate"))
+        expected_date = self.today
+        self.assertEqual(payment_date.year, expected_date.year)
+        self.assertEqual(payment_date.month, expected_date.month)
 
     def get_response_data_helper(self, response):
         response_data = json.loads(response.content)
@@ -404,7 +404,10 @@ class PaymentTestCase(TestCase):
         self.test_student = Student.objects.create(first_name="John", last_name="Testovich")
         self.class_one = ClassModel.objects.create(name="Foil")
 
-        self.today = datetime.now().isoformat()
+        # Django may internally convert isoformat string back into a naive datetime if it's missing timezone info
+        # To be safe, it's better to store the actual aware datetime object, not the string
+        self.today = now() # have an object, not str, with timezone included, convert to string later
+        self.today_naive = datetime.now() # have a naive object, without timezone included, convert to string later
 
         self.payments_url = reverse("payments")
 
@@ -416,10 +419,23 @@ class PaymentTestCase(TestCase):
                 "studentName": "John Testovich",
                 "className": "Foil",
                 "amount": 50.0,
-                "paymentDate": self.today,
+                "paymentDate": self.today.isoformat(),
             }
         }
 
+        self.base_positive_validation(request_data)
+
+    def test_successful_payment_made_naive_payment_date(self):
+        request_data = {
+            "paymentData": {
+                "studentId": self.test_student.id,
+                "classId": self.class_one.id,
+                "studentName": "John Testovich",
+                "className": "Foil",
+                "amount": 50.0,
+                "paymentDate": self.today_naive.isoformat(),
+            }
+        }
         self.base_positive_validation(request_data)
 
     def test_successful_payment_made_no_student_name(self):
@@ -430,7 +446,7 @@ class PaymentTestCase(TestCase):
                 "studentName": "",
                 "className": "Foil",
                 "amount": 50.0,
-                "paymentDate": self.today,
+                "paymentDate": self.today.isoformat(),
             }
         }
 
@@ -444,7 +460,7 @@ class PaymentTestCase(TestCase):
                 "studentName": "John Testovich",
                 "className": "",
                 "amount": 50.0,
-                "paymentDate": self.today,
+                "paymentDate": self.today.isoformat(),
             }
         }
 
@@ -471,7 +487,7 @@ class PaymentTestCase(TestCase):
                 "studentName": "John Testovich",
                 "className": "",
                 "amount": 50.0,
-                "paymentDate": self.today,
+                "paymentDate": self.today.isoformat(),
             }
         }
 
@@ -485,7 +501,7 @@ class PaymentTestCase(TestCase):
                 "studentName": "John Testovich",
                 "className": "",
                 "amount": 50.0,
-                "paymentDate": self.today,
+                "paymentDate": self.today.isoformat(),
             }
         }
 
