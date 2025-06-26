@@ -392,6 +392,14 @@ class PaymentTestCase(TestCase):
         payment_record_id = Payment.objects.get(id=response_data.get("paymentId"))
         self.assertEqual(payment_record_id.id, response_data.get("paymentId"))
 
+    def base_negative_validation_invalid_request_fields(self, request_data, status_code, error_message):
+        response = self.client.post(self.payments_url, json.dumps(request_data), content_type="application/json")
+        self.assertEqual(response.status_code, status_code)
+
+        response_data = self.get_response_data_helper(response)
+        self.assertIn("error", response_data)
+        self.assertEqual(response_data.get("error"), error_message)
+
     def setUp(self):
         self.test_student = Student.objects.create(first_name="John", last_name="Testovich")
         self.class_one = ClassModel.objects.create(name="Foil")
@@ -467,12 +475,7 @@ class PaymentTestCase(TestCase):
             }
         }
 
-        response = self.client.post(self.payments_url, json.dumps(request_data), content_type="application/json")
-        self.assertEqual(response.status_code, 400)
-
-        response_data = self.get_response_data_helper(response)
-        self.assertIn("error", response_data)
-        self.assertEqual(response_data.get("error"), "Missing required fields")
+        self.base_negative_validation_invalid_request_fields(request_data, 400, "Missing required fields")
 
     def test_invalid_payment_missing_class_id(self):
         request_data = {
@@ -486,12 +489,7 @@ class PaymentTestCase(TestCase):
             }
         }
 
-        response = self.client.post(self.payments_url, json.dumps(request_data), content_type="application/json")
-        self.assertEqual(response.status_code, 400)
-
-        response_data = self.get_response_data_helper(response)
-        self.assertIn("error", response_data)
-        self.assertEqual(response_data.get("error"), "Missing required fields")
+        self.base_negative_validation_invalid_request_fields(request_data, 400, "Missing required fields")
 
     def test_invalid_payment_invalid_datetime_format(self):
         request_data = {
@@ -505,9 +503,4 @@ class PaymentTestCase(TestCase):
             }
         }
 
-        response = self.client.post(self.payments_url, json.dumps(request_data), content_type="application/json")
-        self.assertEqual(response.status_code, 400)
-
-        response_data = self.get_response_data_helper(response)
-        self.assertIn("error", response_data)
-        self.assertEqual(response_data.get("error"), "Invalid datetime format")
+        self.base_negative_validation_invalid_request_fields(request_data, 400, "Invalid datetime format")
