@@ -1,7 +1,7 @@
 import datetime
 
 from django.db import models
-from django.utils import timezone
+from django.utils.timezone import now
 
 class Student(models.Model):
     id = models.AutoField(primary_key=True)
@@ -65,7 +65,7 @@ class Payment(models.Model):
     student_name = models.CharField(max_length=50, blank=True)
     class_name = models.CharField(max_length=50, blank=True)
     amount = models.FloatField()
-    payment_date = models.DateTimeField(default=datetime.datetime.now)
+    payment_date = models.DateTimeField(default=now)
 
     def save(self, *args, **kwargs):
         if self.student_id and not self.student_name:
