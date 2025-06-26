@@ -442,6 +442,19 @@ class PaymentTestCase(TestCase):
 
         self.base_positive_validation(request_data)
 
+    def test_successful_payment_made_no_payment_date(self):
+        request_data = {
+            "paymentData": {
+                "studentId": self.test_student.id,
+                "classId": self.class_one.id,
+                "studentName": "John Testovich",
+                "className": "",
+                "amount": 50.0,
+            }
+        }
+
+        self.base_positive_validation(request_data)
+
     def test_payment_missing_student_id(self):
         request_data = {
             "paymentData": {
