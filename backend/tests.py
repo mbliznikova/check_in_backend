@@ -411,6 +411,8 @@ class PaymentTestCase(TestCase):
 
         self.payments_url = reverse("payments")
 
+    # TODO: add tests for month and year
+
     def test_successful_payment_made(self):
         request_data = {
             "paymentData": {
@@ -420,6 +422,8 @@ class PaymentTestCase(TestCase):
                 "className": "Foil",
                 "amount": 50.0,
                 "paymentDate": self.today.isoformat(),
+                "month": 7,
+                "year": 2025,
             }
         }
 
@@ -434,6 +438,8 @@ class PaymentTestCase(TestCase):
                 "className": "Foil",
                 "amount": 50.0,
                 "paymentDate": self.today_naive.isoformat(),
+                "month": 7,
+                "year": 2025,
             }
         }
         self.base_positive_validation(request_data)
@@ -447,6 +453,8 @@ class PaymentTestCase(TestCase):
                 "className": "Foil",
                 "amount": 50.0,
                 "paymentDate": self.today.isoformat(),
+                "month": 7,
+                "year": 2025,
             }
         }
 
@@ -461,6 +469,8 @@ class PaymentTestCase(TestCase):
                 "className": "",
                 "amount": 50.0,
                 "paymentDate": self.today.isoformat(),
+                "month": 7,
+                "year": 2025,
             }
         }
 
@@ -474,6 +484,8 @@ class PaymentTestCase(TestCase):
                 "studentName": "John Testovich",
                 "className": "",
                 "amount": 50.0,
+                "month": 7,
+                "year": 2025,
             }
         }
 
@@ -488,6 +500,8 @@ class PaymentTestCase(TestCase):
                 "className": "",
                 "amount": 50.0,
                 "paymentDate": self.today.isoformat(),
+                "month": 7,
+                "year": 2025,
             }
         }
 
@@ -502,6 +516,8 @@ class PaymentTestCase(TestCase):
                 "className": "",
                 "amount": 50.0,
                 "paymentDate": self.today.isoformat(),
+                "month": 7,
+                "year": 2025,
             }
         }
 
@@ -516,6 +532,8 @@ class PaymentTestCase(TestCase):
                 "className": "",
                 "amount": 50.0,
                 "paymentDate": "2025/02/01",
+                "month": 7,
+                "year": 2025,
             }
         }
 

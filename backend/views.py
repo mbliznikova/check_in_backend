@@ -306,6 +306,8 @@ def payments(request):
             class_name = payment_data.get("className")
             amount = payment_data.get("amount")
             payment_date_str = payment_data.get("paymentDate")
+            month = payment_data.get("month")
+            year = payment_data.get("year")
 
             if not student_id or not class_id or not amount:
                 return make_error_json_response("Missing required fields", 400)
@@ -324,6 +326,8 @@ def payments(request):
                 except Student.DoesNotExist:
                     return make_error_json_response("Class not found", 404)
 
+            # TODO: add handling of month and year
+
             payment_date = parse_datetime(payment_date_str) if payment_date_str else None
 
             if payment_date is None and payment_date_str:
@@ -339,6 +343,8 @@ def payments(request):
                 "student_name": student_name,
                 "class_name": class_name,
                 "amount": amount,
+                "payment_month": month,
+                "payment_year": year,
             }
 
             if payment_date:
@@ -361,6 +367,8 @@ def payments(request):
                     "class_name": saved_payment.class_name,
                     "amount": saved_payment.amount,
                     "payment_date": saved_payment.payment_date.isoformat(),
+                    "payment_month": saved_payment.payment_month,
+                    "payment_year": saved_payment.payment_year,
                 }
             )
 
