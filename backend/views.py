@@ -312,6 +312,9 @@ def payments(request):
             if not student_id or not class_id or not amount:
                 return make_error_json_response("Missing required fields", 400)
 
+            if not month or not year:
+                return make_error_json_response("Missing required fields", 400)
+
             if not student_name:
                 try:
                     student = Student.objects.get(id=student_id)
@@ -326,12 +329,20 @@ def payments(request):
                 except Student.DoesNotExist:
                     return make_error_json_response("Class not found", 404)
 
-            # TODO: add handling of month and year
-
             payment_date = parse_datetime(payment_date_str) if payment_date_str else None
+            print(f"payment date is {payment_date}")
+            print(f"payment_date_str is {payment_date_str}")
 
             if payment_date is None and payment_date_str:
-                return make_error_json_response("Invalid datetime format", 400)
+                return make_error_json_response("Invalid datetime format for payment date", 400)
+
+            if not isinstance(month, int) or not isinstance(year, int):
+                return make_error_json_response("Invalid date format for month or year", 400)
+
+            if not (1 <= month <= 12):
+                return make_error_json_response("Invalid value for month: should be between 1 and 12", 400)
+
+            # TODO: the way to validate the value of the year: how far backward/forward?
 
             # TODO: handle time zones?
             if payment_date and is_naive(payment_date):
@@ -376,8 +387,6 @@ def payments(request):
 
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
-
-        # TODO: Write tests
 
 def payment_summary(request):
     # By default returns for the current month (for now)
