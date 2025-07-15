@@ -531,10 +531,58 @@ class PaymentTestCase(TestCase):
                 "studentName": "John Testovich",
                 "className": "",
                 "amount": 50.0,
-                "paymentDate": "2025/02/01",
+                "paymentDate": "2025-02-01-00-00-00",
                 "month": 7,
                 "year": 2025,
             }
         }
 
-        self.base_negative_validation_invalid_request_fields(request_data, 400, "Invalid datetime format")
+        self.base_negative_validation_invalid_request_fields(request_data, 400, "Invalid datetime format for payment date")
+
+    def test_invalid_payment_no_month_no_year(self):
+        request_data = {
+            "paymentData": {
+                "studentId": self.test_student.id,
+                "classId": self.class_one.id,
+                "studentName": "John Testovich",
+                "className": "",
+                "amount": 50.0,
+                "paymentDate": self.today.isoformat(),
+                "month": None,
+                "year": None,
+            }
+        }
+
+        self.base_negative_validation_invalid_request_fields(request_data, 400, "Missing required fields")
+
+    def test_invalid_payment_text_month_format(self):
+        request_data = {
+            "paymentData": {
+                "studentId": self.test_student.id,
+                "classId": self.class_one.id,
+                "studentName": "John Testovich",
+                "className": "",
+                "amount": 50.0,
+                "paymentDate": self.today.isoformat(),
+                "month": "Jul",
+                "year": 2025,
+            }
+        }
+
+        self.base_negative_validation_invalid_request_fields(request_data, 400, "Invalid date format for month or year")
+
+    def test_invalid_payment_month_value_out_of_range(self):
+        request_data = {
+            "paymentData": {
+                "studentId": self.test_student.id,
+                "classId": self.class_one.id,
+                "studentName": "John Testovich",
+                "className": "",
+                "amount": 50.0,
+                "paymentDate": self.today.isoformat(),
+                "month": 13,
+                "year": 2025,
+            }
+        }
+
+        self.base_negative_validation_invalid_request_fields(request_data, 400, "Invalid value for month: should be between 1 and 12")
