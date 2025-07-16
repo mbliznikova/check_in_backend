@@ -330,8 +330,6 @@ def payments(request):
                     return make_error_json_response("Class not found", 404)
 
             payment_date = parse_datetime(payment_date_str) if payment_date_str else None
-            print(f"payment date is {payment_date}")
-            print(f"payment_date_str is {payment_date_str}")
 
             if payment_date is None and payment_date_str:
                 return make_error_json_response("Invalid datetime format for payment date", 400)
