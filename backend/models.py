@@ -74,8 +74,6 @@ class Payment(models.Model):
             self.student_name = f"{self.student_id.first_name} {self.student_id.last_name}"
         if self.class_id and not self.class_name:
             self.class_name = f"{self.class_id.name}"
-        if self.payment_date:
-            self.payment_date = self.payment_date.replace(day=1)
         super().save(*args, **kwargs)
 
 class Price(models.Model):

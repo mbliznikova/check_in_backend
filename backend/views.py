@@ -287,7 +287,7 @@ def prices_list(request):
 @require_http_methods(["GET", "POST"])
 def payments(request):
     if request.method == "GET":
-        payments = Payment.objects.all()
+        payments = Payment.objects.all().filter(payment_year = now().year,payment_month = now().month)
         serializer = PaymentSerializer(payments, many=True)
 
         response = {
@@ -390,9 +390,10 @@ def payment_summary(request):
     # By default returns for the current month (for now)
     # Should I calculate it from payments? Every time or by a separate request only?
     # If there is an existing entry - compare and recalculate if needed
+
     payment_summary = Payment.objects.filter(
-        payment_date__year = now().year,
-        payment_date__month = now().month
+        payment_year = now().year,
+        payment_month = now().month
     )
 
     new_summary = payment_summary.aggregate(Sum("amount"))["amount__sum"] or 0.0
