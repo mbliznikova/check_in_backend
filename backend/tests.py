@@ -362,6 +362,9 @@ class PaymentTestCase(TestCase):
         self.assertIn("amount", response_data)
         self.assertTrue(isinstance, response_data.get("amount"))
 
+        self.assertIn("paymentMonth", response_data)
+        self.assertIn("paymentYear", response_data)
+
     def additional_positive_response_content_helper(self, response_data):
         self.assertIn("studentName", response_data)
         student_name = f"{self.test_student.first_name} {self.test_student.last_name}"
@@ -586,3 +589,73 @@ class PaymentTestCase(TestCase):
         }
 
         self.base_negative_validation_invalid_request_fields(request_data, 400, "Invalid value for month: should be between 1 and 12")
+
+    def test_retrieving_payments_from_another_month(self):
+        another_payment_month = 6
+
+        request_data_one = {
+            "paymentData": {
+                "studentId": self.test_student.id,
+                "classId": self.class_one.id,
+                "studentName": "John Testovich",
+                "className": "Foil",
+                "amount": 50.0,
+                "month": 7,
+                "year": 2025,
+            }
+        }
+
+        request_data_two = {
+            "paymentData": {
+                "studentId": self.test_student.id,
+                "classId": self.class_one.id,
+                "studentName": "John Testovich",
+                "className": "Foil",
+                "amount": 50.0,
+                "month": another_payment_month,
+                "year": 2025,
+            }
+        }
+
+        self.base_positive_validation(request_data_one)
+        self.base_positive_validation(request_data_two)
+
+        all_payments = Payment.objects.all()
+        self.assertEqual(all_payments.count(), 2)
+        payment_record_for_another_month = Payment.objects.filter(payment_month=another_payment_month)
+        self.assertEqual(payment_record_for_another_month.count(), 1)
+
+    def test_retrieving_payments_from_another_year(self):
+        another_payment_year = 2024
+
+        request_data_one = {
+            "paymentData": {
+                "studentId": self.test_student.id,
+                "classId": self.class_one.id,
+                "studentName": "John Testovich",
+                "className": "Foil",
+                "amount": 50.0,
+                "month": 7,
+                "year": 2025,
+            }
+        }
+
+        request_data_two = {
+            "paymentData": {
+                "studentId": self.test_student.id,
+                "classId": self.class_one.id,
+                "studentName": "John Testovich",
+                "className": "Foil",
+                "amount": 50.0,
+                "month": 7,
+                "year": another_payment_year,
+            }
+        }
+
+        self.base_positive_validation(request_data_one)
+        self.base_positive_validation(request_data_two)
+
+        all_payments = Payment.objects.all()
+        self.assertEqual(all_payments.count(), 2)
+        payment_record_for_another_month = Payment.objects.filter(payment_year=another_payment_year)
+        self.assertEqual(payment_record_for_another_month.count(), 1)
