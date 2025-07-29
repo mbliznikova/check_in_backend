@@ -287,7 +287,11 @@ def prices_list(request):
 @require_http_methods(["GET", "POST"])
 def payments(request):
     if request.method == "GET":
-        payments = Payment.objects.all().filter(payment_year = now().year,payment_month = now().month)
+        payment_month_param = request.GET.get('month', now().month)
+        payment_year_param = request.GET.get('year', now().year)
+        payments = Payment.objects.all().filter(
+            payment_month = payment_month_param,
+            payment_year = payment_year_param)
         serializer = PaymentSerializer(payments, many=True)
 
         response = {
