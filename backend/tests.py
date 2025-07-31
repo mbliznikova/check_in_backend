@@ -659,3 +659,46 @@ class PaymentTestCase(TestCase):
         self.assertEqual(all_payments.count(), 2)
         payment_record_for_another_month = Payment.objects.filter(payment_year=another_payment_year)
         self.assertEqual(payment_record_for_another_month.count(), 1)
+
+class ClassesTestCase(TestCase):
+    def setUp(self):
+        self.classes_url = reverse("classes")
+        self.class_one_name = "Test Class One"
+
+    def positive_response_helper(self, response, expected_status, message):
+        self.assertEqual(response.status_code, expected_status)
+        response_data = json.loads(response.content)
+        self.assertIn("message", response_data)
+        self.assertEqual(response_data.get("message"), message)
+
+    def positive_response_content_helper(self, response, expected_class_name=""):
+        response_data = json.loads(response.content)
+        self.assertIn("id", response_data)
+        self.assertIn("name", response_data)
+
+        if expected_class_name:
+            self.assertEqual(response_data["name"], expected_class_name)
+
+    def error_response_helper(self, response, expected_code, expected_message):
+        self.assertEqual(response.status_code, expected_code)
+        response_data = json.loads(response.content)
+        self.assertIn("error", response_data)
+        self.assertEqual(response_data.get("error"), expected_message)
+
+
+    def test_create_class_successfully(self):
+        request_data = {
+            "name": self.class_one_name
+        }
+
+        response = self.client.post(self.classes_url, json.dumps(request_data), content_type="application/json")
+        self.positive_response_helper(response, 200, "Class was created successfully")
+        self.positive_response_content_helper(response=response, expected_class_name=self.class_one_name)
+
+    def test_class_with_empty_name_not_created(self):
+        request_data = {
+            "name": ""
+        }
+
+        response = self.client.post(self.classes_url, json.dumps(request_data), content_type="application/json")
+        self.error_response_helper(response, 400, "Class name should not be empty")
