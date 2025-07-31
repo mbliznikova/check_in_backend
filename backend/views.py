@@ -47,6 +47,7 @@ def classes(request):
     try:
         request_body = json.loads(request.body)
         name = request_body.get("name", "")
+
         if not name:
             return make_error_json_response("Class name should not be empty", 400)
 
@@ -87,8 +88,40 @@ def students(request):
         }
 
         return JsonResponse(response)
+
     if request.method == "POST":
-        pass
+        try:
+            request_body = json.loads(request.body)
+            first_name = request_body.get("firstName", "")
+            last_name = request_body.get("lastName", "")
+
+            if not first_name or not last_name:
+                return make_error_json_response("First and last name should not be empty", 400)
+
+            data_to_write = {
+                "first_name": first_name,
+                "last_name": last_name,
+            }
+
+            serializer = StudentSerializer(data=data_to_write)
+            if serializer.is_valid():
+                saved_student = serializer.save()
+
+            respone = StudentSerializer.dict_to_camel_case(
+                {
+                    "message": "Student was created successfully",
+                    "student_id": saved_student.id,
+                    "first_name": saved_student.first_name,
+                    "last_name": saved_student.last_name,
+                }
+            )
+
+            return make_success_json_response(200, response_body=respone)
+
+        except json.JSONDecodeError:
+            return make_error_json_response("Invalid JSON", 400)
+        except Exception as e:
+            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
 @csrf_exempt
 @require_http_methods(["POST"])
