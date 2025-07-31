@@ -702,3 +702,63 @@ class ClassesTestCase(TestCase):
 
         response = self.client.post(self.classes_url, json.dumps(request_data), content_type="application/json")
         self.error_response_helper(response, 400, "Class name should not be empty")
+
+
+class StudentsTestCase(TestCase):
+    def setUp(self):
+        self.students_url = reverse("students")
+        self.first_name_one = "First"
+        self.last_name_one = "Last"
+
+    def positive_response_helper(self, response, expected_status, message):
+        self.assertEqual(response.status_code, expected_status)
+        response_data = json.loads(response.content)
+        self.assertIn("message", response_data)
+        self.assertEqual(response_data.get("message"), message)
+
+    def positive_response_content_helper(self, response, expected_first_name, expected_last_name):
+        response_data = json.loads(response.content)
+        self.assertIn("studentId", response_data)
+        self.assertIn("firstName", response_data)
+        self.assertIn("lastName", response_data)
+
+        self.assertEqual(response_data["firstName"], expected_first_name)
+        self.assertEqual(response_data["lastName"], expected_last_name)
+
+    def error_response_helper(self, response, expected_code, expected_message):
+        self.assertEqual(response.status_code, expected_code)
+        response_data = json.loads(response.content)
+        self.assertIn("error", response_data)
+        self.assertEqual(response_data.get("error"), expected_message)
+
+
+    def test_create_student_successfully(self):
+        request_data = {
+            "firstName": self.first_name_one,
+            "lastName": self.last_name_one,
+        }
+
+        response = self.client.post(self.students_url, json.dumps(request_data), content_type="application/json")
+        self.positive_response_helper(response, 200, "Student was created successfully")
+        self.positive_response_content_helper(
+            response=response,
+            expected_first_name=self.first_name_one,
+            expected_last_name=self.last_name_one)
+
+    def test_student_with_empty_both_first_last_names_not_created(self):
+        request_data = {
+            "firstName": "",
+            "lastName": "",
+        }
+
+        response = self.client.post(self.students_url, json.dumps(request_data), content_type="application/json")
+        self.error_response_helper(response, 400, "First and last name should not be empty")
+
+    def test_student_with_empty_first_name_not_created(self):
+        request_data = {
+            "firstName": "",
+            "lastName": self.last_name_one,
+        }
+
+        response = self.client.post(self.students_url, json.dumps(request_data), content_type="application/json")
+        self.error_response_helper(response, 400, "First and last name should not be empty")
