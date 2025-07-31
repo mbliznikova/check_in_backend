@@ -75,15 +75,20 @@ def classes(request):
     except Exception as e:
         return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
-def student_list(request):
-    students = Student.objects.all()
-    serializer = StudentSerializer(students, many=True)
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def students(request):
+    if request.method == "GET":
+        students = Student.objects.all()
+        serializer = StudentSerializer(students, many=True)
 
-    response = {
-        "response": serializer.data
-    }
+        response = {
+            "response": serializer.data
+        }
 
-    return JsonResponse(response)
+        return JsonResponse(response)
+    if request.method == "POST":
+        pass
 
 @csrf_exempt
 @require_http_methods(["POST"])
