@@ -41,6 +41,40 @@ def classes_list(request):
 
     return JsonResponse(response)
 
+@csrf_exempt
+@require_http_methods(["POST"])
+def classes(request):
+    try:
+        request_body = json.loads(request.body)
+        name = request_body.get("name", "")
+        if not name:
+            return make_error_json_response("Class name should not be empty", 400)
+
+        data_to_write = {
+            "name": name
+        }
+
+        serializer = ClassModelSerializer(data=data_to_write)
+        if serializer.is_valid():
+            saved_class = serializer.save()
+        else:
+            return make_error_json_response(serializer.errors, 400)
+
+        response = ClassModelSerializer.dict_to_camel_case( # for the case there will be camel case in the future
+            {
+                "message": "Class was created successfully",
+                "id": saved_class.id,
+                "name": saved_class.name,
+            }
+        )
+
+        return make_success_json_response(200, response_body=response)
+
+    except json.JSONDecodeError:
+        return make_error_json_response("Invalid JSON", 400)
+    except Exception as e:
+        return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+
 def student_list(request):
     students = Student.objects.all()
     serializer = StudentSerializer(students, many=True)
