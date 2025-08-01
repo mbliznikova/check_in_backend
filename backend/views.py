@@ -11,7 +11,7 @@ from django.utils.timezone import now, is_naive, make_aware
 from django.utils.dateparse import parse_datetime
 
 from .models import ClassModel, Student, Day, Schedule, Attendance, Price, Payment
-from .serializers import CaseSerializer, StudentSerializer, ClassModelSerializer, AttendanceSerializer, PaymentSerializer, MonthlyPaymentsSummary
+from .serializers import CaseSerializer, StudentSerializer, ClassModelSerializer, AttendanceSerializer, PaymentSerializer, MonthlyPaymentsSummary, ScheduleSerializer
 
 def make_error_json_response(error_message, status_code):
     return JsonResponse({"error": error_message}, status=status_code)
@@ -75,6 +75,29 @@ def classes(request):
         return make_error_json_response("Invalid JSON", 400)
     except Exception as e:
         return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def schedules(request):
+    if request.method == "GET":
+        schedules = Schedule.objects.all()
+        serializer = ScheduleSerializer(schedules, many=True)
+
+        response = {
+            "response": serializer.data
+        }
+
+        return JsonResponse(response)
+
+    if request.method == "POST":
+        try:
+            request_body = json.loads(request.body)
+            # TODO: handle request body parsing
+
+        except json.JSONDecodeError:
+            return make_error_json_response("Invalid JSON", 400)
+        except Exception as e:
+            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])

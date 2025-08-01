@@ -14,4 +14,5 @@ urlpatterns = [
     path("prices/", views.prices_list, name="prices"),
     path("payments/", views.payments, name="payments"),
     path("payment_summary/", views.payment_summary, name="payment_summary"),
+    path("schedules/", views.schedules, name="schedules"),
 ]
