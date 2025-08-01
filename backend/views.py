@@ -92,7 +92,22 @@ def schedules(request):
     if request.method == "POST":
         try:
             request_body = json.loads(request.body)
-            # TODO: handle request body parsing
+            class_id = request_body.get("classId", "")
+            day_name = request_body.get("day", "")
+            class_time_str = request_body.get("classTime", "")
+
+            if not class_id or not day_name or not class_time_str:
+                return make_error_json_response("Missing required fields", 400)
+
+            try:
+                class_model = ClassModel.objects.get(id=class_id)
+            except ClassModel.DoesNotExist:
+                return make_error_json_response("Class not found", 404)
+
+            try:
+                day = Day.objects.get(id=class_id)
+            except Day.DoesNotExist:
+                return make_error_json_response("Day not found", 404)
 
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
