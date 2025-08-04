@@ -109,6 +109,13 @@ def schedules(request):
             except Day.DoesNotExist:
                 return make_error_json_response("Day not found", 404)
 
+            try:
+                parsed_time = parse_datetime(class_time_str)
+                if not parsed_time:
+                    return make_error_json_response("Invalid time format", 400)
+            except (ValueError, TypeError):
+                return make_error_json_response("Invalid time format", 400)
+
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
         except Exception as e:
