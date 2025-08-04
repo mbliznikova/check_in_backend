@@ -1,12 +1,13 @@
 import json
 
-from datetime import datetime
+from datetime import datetime, time
 
+from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
 from django.utils.timezone import now
 
-from .models import ClassModel, Student, Attendance, Payment, Day
+from .models import ClassModel, Student, Attendance, Payment, Day, Schedule
 
 class CheckInTestCase(TestCase):
     def positive_response_helper(self, response, expected_status, message):
@@ -860,4 +861,35 @@ class SchedulesTestCase(TestCase):
         response = self.client.post(self.schedules_url, json.dumps(request_data), content_type="application/json")
         self.error_response_helper(response, 400, "Invalid time format")
 
-    # TODO: Add test that checks that user can't schedule two classes at the same day and time
+    def test_can_not_schedule_two_classes_at_the_same_day_and_time(self):
+        request_data_one = {
+            "classId": self.class_one.id,
+            "day": self.day_one.name,
+            "classTime": self.time_one,
+        }
+
+        request_data_two = {
+            "classId": self.class_two.id,
+            "day": self.day_one.name,
+            "classTime": self.time_one,
+        }
+
+        response = self.client.post(self.schedules_url, json.dumps(request_data_one), content_type="application/json")
+        self.positive_response_helper(response, 200, "Schedule was created successfully")
+        self.positive_response_content_helper(
+            response=response,
+            expected_class_id=self.class_one.id,
+            expected_class_name=self.class_one.name,
+            expected_day=self.day_one.name,
+            expected_time=self.time_one,
+        )
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic:
+                Schedule.objects.create(
+                    class_model=self.class_two,
+                    day=self.day_one,
+                    class_time=time(10, 0, 0)
+                )
+
+    # TODO: add view test for attempt to schedule two classes to the same time
