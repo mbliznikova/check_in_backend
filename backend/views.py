@@ -138,6 +138,8 @@ def schedules(request):
 
             return make_success_json_response(200, response_body=response)
 
+        # TODO: add check for attempt to schedule the class to already existing schedule, see issue #2
+
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
         except Exception as e:

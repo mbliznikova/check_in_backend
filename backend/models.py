@@ -30,7 +30,7 @@ class Schedule(models.Model):
     class_time = models.TimeField()
 
     class Meta:
-        unique_together = ("class_model", "day", "class_time")
+        unique_together = ("day", "class_time")
 
     def __str__(self):
         return f'{self.class_model.name} on {self.day.name} at {self.class_time}'
