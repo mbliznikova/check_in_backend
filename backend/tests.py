@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils.timezone import now
 
-from .models import ClassModel, Student, Attendance, Payment
+from .models import ClassModel, Student, Attendance, Payment, Day
 
 class CheckInTestCase(TestCase):
     def positive_response_helper(self, response, expected_status, message):
@@ -762,3 +762,102 @@ class StudentsTestCase(TestCase):
 
         response = self.client.post(self.students_url, json.dumps(request_data), content_type="application/json")
         self.error_response_helper(response, 400, "First and last name should not be empty")
+
+
+class SchedulesTestCase(TestCase):
+    def setUp(self):
+        self.schedules_url = reverse("schedules")
+        self.class_one = ClassModel.objects.create(name="Foil")
+        self.class_two = ClassModel.objects.create(name="Heavy sabre")
+        self.day_one = Day.objects.create(name="Monday")
+        self.day_two = Day.objects.create(name="Tuesday")
+        self.time_one = "10:00:00"
+        self.time_two = "15:30:00"
+
+    def positive_response_helper(self, response, expected_status, message):
+        self.assertEqual(response.status_code, expected_status)
+        response_data = json.loads(response.content)
+        self.assertIn("message", response_data)
+        self.assertEqual(response_data.get("message"), message)
+
+    def positive_response_content_helper(self,
+                                         response,
+                                         expected_class_id,
+                                         expected_class_name,
+                                         expected_day,
+                                         expected_time):
+        response_data = json.loads(response.content)
+        self.assertIn("classId", response_data)
+        self.assertIn("className", response_data)
+        self.assertIn("day", response_data)
+        self.assertIn("time", response_data)
+
+        self.assertEqual(response_data.get("classId"), expected_class_id)
+        self.assertEqual(response_data.get("className"), expected_class_name)
+        self.assertEqual(response_data.get("day"), expected_day)
+        self.assertEqual(response_data.get("time"), expected_time)
+
+    def error_response_helper(self, response, expected_code, expected_message):
+        self.assertEqual(response.status_code, expected_code)
+        response_data = json.loads(response.content)
+        self.assertIn("error", response_data)
+        self.assertEqual(response_data.get("error"), expected_message)
+
+    def test_schedule_class_successfully(self):
+        request_data = {
+            "classId": self.class_one.id,
+            "day": self.day_one.name,
+            "classTime": self.time_one,
+        }
+
+        response = self.client.post(self.schedules_url, json.dumps(request_data), content_type="application/json")
+        self.positive_response_helper(response, 200, "Schedule was created successfully")
+        self.positive_response_content_helper(
+            response=response,
+            expected_class_id=self.class_one.id,
+            expected_class_name=self.class_one.name,
+            expected_day=self.day_one.name,
+            expected_time=self.time_one,
+        )
+
+    def test_class_with_incorrect_fields_not_scheduled(self):
+        request_data = {
+            "classId": None,
+            "day": None,
+            "classTime": self.time_one,
+        }
+
+        response = self.client.post(self.schedules_url, json.dumps(request_data), content_type="application/json")
+        self.error_response_helper(response, 400, "Missing required fields")
+
+    def test_class_with_incorrect_class_id_not_scheduled(self):
+        request_data = {
+            "classId": 12354,
+            "day": self.day_one.name,
+            "classTime": self.time_one,
+        }
+
+        response = self.client.post(self.schedules_url, json.dumps(request_data), content_type="application/json")
+        self.error_response_helper(response, 404, "Class not found")
+
+    def test_class_with_incorrect_day_name_not_scheduled(self):
+        request_data = {
+            "classId": self.class_one.id,
+            "day": "Mon",
+            "classTime": self.time_one,
+        }
+
+        response = self.client.post(self.schedules_url, json.dumps(request_data), content_type="application/json")
+        self.error_response_helper(response, 404, "Day not found")
+
+    def test_class_with_incorrect_time_format_not_scheduled(self):
+        request_data = {
+            "classId": self.class_one.id,
+            "day": self.day_one.name,
+            "classTime": "3PM",
+        }
+
+        response = self.client.post(self.schedules_url, json.dumps(request_data), content_type="application/json")
+        self.error_response_helper(response, 400, "Invalid time format")
+
+    # TODO: Add test that checks that user can't schedule two classes at the same day and time
