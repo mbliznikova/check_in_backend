@@ -8,7 +8,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.timezone import now, is_naive, make_aware
-from django.utils.dateparse import parse_datetime
+from django.utils.dateparse import parse_datetime, parse_time
 
 from .models import ClassModel, Student, Day, Schedule, Attendance, Price, Payment
 from .serializers import CaseSerializer, StudentSerializer, ClassModelSerializer, AttendanceSerializer, PaymentSerializer, MonthlyPaymentsSummary, ScheduleSerializer
@@ -105,16 +105,38 @@ def schedules(request):
                 return make_error_json_response("Class not found", 404)
 
             try:
-                day = Day.objects.get(id=class_id)
+                day = Day.objects.get(name=day_name)
             except Day.DoesNotExist:
                 return make_error_json_response("Day not found", 404)
 
             try:
-                parsed_time = parse_datetime(class_time_str)
+                parsed_time = parse_time(class_time_str)
                 if not parsed_time:
                     return make_error_json_response("Invalid time format", 400)
             except (ValueError, TypeError):
                 return make_error_json_response("Invalid time format", 400)
+
+            data_to_write = {
+                "class_model": class_model.id,
+                "day": day.id,
+                "class_time": parsed_time
+            }
+
+            serializer = ScheduleSerializer(data=data_to_write)
+            if serializer.is_valid():
+                saved_schedule = serializer.save()
+
+            response = ScheduleSerializer.dict_to_camel_case(
+                {
+                    "message": "Schedule was created successfully",
+                    "class_id": saved_schedule.class_model.id,
+                    "class_name": saved_schedule.class_model.name,
+                    "day": saved_schedule.day.name,
+                    "time": saved_schedule.class_time,
+                }
+            )
+
+            return make_success_json_response(200, response_body=response)
 
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
