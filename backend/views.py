@@ -536,9 +536,12 @@ def payment_summary(request):
     # Should I calculate it from payments? Every time or by a separate request only?
     # If there is an existing entry - compare and recalculate if needed
 
+    payment_month_param = request.GET.get("month", now().month)
+    payment_year_param = request.GET.get("year", now().year)
+
     payment_summary = Payment.objects.filter(
-        payment_year = now().year,
-        payment_month = now().month
+        payment_year = payment_year_param,
+        payment_month = payment_month_param
     )
 
     new_summary = payment_summary.aggregate(Sum("amount"))["amount__sum"] or 0.0
