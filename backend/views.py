@@ -125,6 +125,8 @@ def schedules(request):
             serializer = ScheduleSerializer(data=data_to_write)
             if serializer.is_valid():
                 saved_schedule = serializer.save()
+            else:
+                return make_error_json_response(serializer.errors, 400)
 
             response = ScheduleSerializer.dict_to_camel_case(
                 {
@@ -175,6 +177,8 @@ def students(request):
             serializer = StudentSerializer(data=data_to_write)
             if serializer.is_valid():
                 saved_student = serializer.save()
+            else:
+                return make_error_json_response(serializer.errors, 400)
 
             respone = StudentSerializer.dict_to_camel_case(
                 {
