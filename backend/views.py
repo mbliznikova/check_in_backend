@@ -21,7 +21,7 @@ def make_success_json_response(status_code, message="Success", response_body=Non
         return JsonResponse(response_body, status=status_code)
     return JsonResponse({"message": message}, status=status_code)
 
-def classes_list(request):
+def today_classes_list(request):
     today_name = datetime.today().strftime("%A")
 
     today_day_object = Day.objects.filter(name=today_name).first()
@@ -42,39 +42,49 @@ def classes_list(request):
     return JsonResponse(response)
 
 @csrf_exempt
-@require_http_methods(["POST"])
+@require_http_methods(["GET", "POST"])
 def classes(request):
-    try:
-        request_body = json.loads(request.body)
-        name = request_body.get("name", "")
+    if request.method == "GET":
+        classes = ClassModel.objects.all()
+        serializer = ClassModelSerializer(classes, many=True)
 
-        if not name:
-            return make_error_json_response("Class name should not be empty", 400)
-
-        data_to_write = {
-            "name": name
+        response = {
+            "response": serializer.data
         }
 
-        serializer = ClassModelSerializer(data=data_to_write)
-        if serializer.is_valid():
-            saved_class = serializer.save()
-        else:
-            return make_error_json_response(serializer.errors, 400)
+        return JsonResponse(response)
+    if request.method == "POST":
+        try:
+            request_body = json.loads(request.body)
+            name = request_body.get("name", "")
 
-        response = ClassModelSerializer.dict_to_camel_case( # for the case there will be camel case in the future
-            {
-                "message": "Class was created successfully",
-                "id": saved_class.id,
-                "name": saved_class.name,
+            if not name:
+                return make_error_json_response("Class name should not be empty", 400)
+
+            data_to_write = {
+                "name": name
             }
-        )
 
-        return make_success_json_response(200, response_body=response)
+            serializer = ClassModelSerializer(data=data_to_write)
+            if serializer.is_valid():
+                saved_class = serializer.save()
+            else:
+                return make_error_json_response(serializer.errors, 400)
 
-    except json.JSONDecodeError:
-        return make_error_json_response("Invalid JSON", 400)
-    except Exception as e:
-        return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+            response = ClassModelSerializer.dict_to_camel_case( # for the case there will be camel case in the future
+                {
+                    "message": "Class was created successfully",
+                    "id": saved_class.id,
+                    "name": saved_class.name,
+                }
+            )
+
+            return make_success_json_response(200, response_body=response)
+
+        except json.JSONDecodeError:
+            return make_error_json_response("Invalid JSON", 400)
+        except Exception as e:
+            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
