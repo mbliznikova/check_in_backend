@@ -87,6 +87,51 @@ def classes(request):
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
 @csrf_exempt
+@require_http_methods(["PUT"])
+def update_class(request, class_id):
+    if request.method == "PUT":
+        try:
+            class_instance = ClassModel.objects.get(id=class_id)
+
+            request_body = json.loads(request.body)
+            class_name = request_body.get("name", "")
+
+            if not class_name:
+                return make_error_json_response("Missing required fields", 400)
+
+            class_instance.name = class_name
+            class_instance.save()
+
+            response = ClassModelSerializer.dict_to_camel_case(
+                {
+                    "message": "Class was updated successfully",
+                    "class_id": class_instance.id,
+                    "class_name": class_instance.name,
+                }
+            )
+
+            return make_success_json_response(200, response_body=response)
+
+        except ClassModel.DoesNotExist:
+            return make_error_json_response("Class not found", 404)
+        except json.JSONDecodeError:
+            return make_error_json_response("Invalid JSON", 400)
+        except Exception as e:
+            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def dalete_class(request, class_id):
+    if request.method == "DELETE":
+        try:
+            pass
+            # add deletion here
+        except ClassModel.DoesNotExist:
+            return make_error_json_response("Class not found", 404)
+        except Exception as e:
+            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+
+@csrf_exempt
 @require_http_methods(["GET", "POST"])
 def schedules(request):
     if request.method == "GET":
@@ -485,7 +530,7 @@ def payments(request):
                 try:
                     cls = ClassModel.objects.get(id=class_id)
                     class_name = f"{cls.name}"
-                except Student.DoesNotExist:
+                except ClassModel.DoesNotExist:
                     return make_error_json_response("Class not found", 404)
 
             payment_date = parse_datetime(payment_date_str) if payment_date_str else None
