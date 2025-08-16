@@ -121,11 +121,22 @@ def update_class(request, class_id):
 
 @csrf_exempt
 @require_http_methods(["DELETE"])
-def dalete_class(request, class_id):
+def delete_class(request, class_id):
     if request.method == "DELETE":
         try:
-            pass
-            # add deletion here
+           class_instance = ClassModel.objects.get(id=class_id)
+           class_instance.delete()
+
+           response = ClassModelSerializer.dict_to_camel_case(
+                {
+                    "message": f"Class {class_instance.id} - {class_instance.name} was delete successfully",
+                    "class_id": class_instance.id,
+                    "class_name": class_instance.name,
+                }
+            )
+
+           return make_success_json_response(200, response_body=response)
+
         except ClassModel.DoesNotExist:
             return make_error_json_response("Class not found", 404)
         except Exception as e:
