@@ -125,13 +125,16 @@ def delete_class(request, class_id):
     if request.method == "DELETE":
         try:
            class_instance = ClassModel.objects.get(id=class_id)
+           class_instance_id = class_instance.id
+           class_instance_name = class_instance.name
+
            class_instance.delete()
 
            response = ClassModelSerializer.dict_to_camel_case(
                 {
-                    "message": f"Class {class_instance.id} - {class_instance.name} was delete successfully",
-                    "class_id": class_instance.id,
-                    "class_name": class_instance.name,
+                    "message": f"Class {class_instance_id} - {class_instance_name} was delete successfully",
+                    "class_id": class_instance_id,
+                    "class_name": class_instance_name,
                 }
             )
 
