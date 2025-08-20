@@ -88,7 +88,7 @@ def classes(request):
 
 @csrf_exempt
 @require_http_methods(["PUT"])
-def update_class(request, class_id):
+def edit_class(request, class_id):
     if request.method == "PUT":
         try:
             class_instance = ClassModel.objects.get(id=class_id)
