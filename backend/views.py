@@ -21,6 +21,7 @@ def make_success_json_response(status_code, message="Success", response_body=Non
         return JsonResponse(response_body, status=status_code)
     return JsonResponse({"message": message}, status=status_code)
 
+# TODO: should I move it to schedules and just have a query parameter?
 def today_classes_list(request):
     today_name = datetime.today().strftime("%A")
 
@@ -149,7 +150,11 @@ def delete_class(request, class_id):
 @require_http_methods(["GET", "POST"])
 def schedules(request):
     if request.method == "GET":
-        schedules = Schedule.objects.all()
+        class_id = request.GET.get("class_id")
+        if class_id:
+            schedules = Schedule.objects.filter(class_model=class_id)
+        else:
+            schedules = Schedule.objects.all()
         serializer = ScheduleSerializer(schedules, many=True)
 
         response = {
