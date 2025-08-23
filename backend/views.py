@@ -147,6 +147,30 @@ def delete_class(request, class_id):
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
 @csrf_exempt
+@require_http_methods(["DELETE"])
+def delete_schedule(request, schedule_id):
+    if request.method == "DELETE":
+        try:
+            schedule_instance = Schedule.objects.get(id=schedule_id)
+            schedule_instance_id = schedule_instance.id
+
+            schedule_instance.delete()
+
+            response = ScheduleSerializer.dict_to_camel_case(
+                {
+                    "message": f"Schedule {schedule_instance_id} was delete successfully",
+                    "schedule_id": schedule_instance_id,
+                }
+            )
+
+            return make_success_json_response(200, response_body=response)
+
+        except Schedule.DoesNotExist:
+            return make_error_json_response("Schedule not found", 404)
+        except Exception as e:
+            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+
+@csrf_exempt
 @require_http_methods(["GET", "POST"])
 def schedules(request):
     if request.method == "GET":
