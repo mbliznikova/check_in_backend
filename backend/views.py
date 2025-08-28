@@ -229,6 +229,7 @@ def schedules(request):
             response = ScheduleSerializer.dict_to_camel_case(
                 {
                     "message": "Schedule was created successfully",
+                    "schedule_id": saved_schedule.id,
                     "class_id": saved_schedule.class_model.id,
                     "class_name": saved_schedule.class_model.name,
                     "day": saved_schedule.day.name,
