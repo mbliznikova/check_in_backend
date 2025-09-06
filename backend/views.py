@@ -296,6 +296,30 @@ def students(request):
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
 @csrf_exempt
+@require_http_methods(["DELETE"])
+def delete_student(request, student_id):
+    if request.method == "DELETE":
+        try:
+            student_instance = Student.objects.get(id=student_id)
+            student_instance_id = student_instance.id
+
+            student_instance.delete()
+
+            response = StudentSerializer.dict_to_camel_case(
+                {
+                    "message": f"Student {student_instance_id} was delete successfully",
+                    "student_id": student_instance_id,
+                }
+            )
+
+            return make_success_json_response(200, response_body=response)
+
+        except Schedule.DoesNotExist:
+            return make_error_json_response("Student not found", 404)
+        except Exception as e:
+            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+
+@csrf_exempt
 @require_http_methods(["POST"])
 def check_in(request):
     # For now this view sreves for insertion and deletion entries to/from Attendance table since the data with classes
