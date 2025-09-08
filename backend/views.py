@@ -296,6 +296,42 @@ def students(request):
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
 @csrf_exempt
+@require_http_methods(["PUT"])
+def edit_student(request, student_id):
+    if request.method == "PUT":
+        try:
+            student_instance = Student.objects.get(id=student_id)
+
+            request_body = json.loads(request.body)
+            first_name = request_body.get("firstName", "")
+            last_name = request_body.get("lastName", "")
+
+            if not first_name or not last_name:
+                return make_error_json_response("Missing required fields", 400)
+
+            student_instance.first_name = first_name
+            student_instance.last_name = last_name
+            student_instance.save()
+
+            response = StudentSerializer.dict_to_camel_case(
+                {
+                    "message": f"Student {student_instance.id} was updated successfully",
+                    "student_id": student_instance.id,
+                    "first_name": student_instance.first_name,
+                    "last_name": student_instance.last_name,
+                }
+            )
+
+            return make_success_json_response(200, response_body=response)
+
+        except Student.DoesNotExist:
+            return make_error_json_response("Student not found", 404)
+        except json.JSONDecodeError:
+            return make_error_json_response("Invalid JSON", 400)
+        except Exception as e:
+            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+
+@csrf_exempt
 @require_http_methods(["DELETE"])
 def delete_student(request, student_id):
     if request.method == "DELETE":
