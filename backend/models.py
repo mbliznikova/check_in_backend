@@ -41,18 +41,29 @@ class Attendance(models.Model):
     # Backlog? Since it would require changes in FE as well.
     student_id = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True)
     class_id = models.ForeignKey(ClassModel, on_delete=models.SET_NULL, null=True)
-    student_name = models.CharField(max_length=50, blank=True)
+    student_first_name = models.CharField(max_length=50, blank=True)
+    student_last_name = models.CharField(max_length=50, blank=True)
     class_name = models.CharField(max_length=50, blank=True)
     attendance_date = models.DateField(default=datetime.date.today)
     is_showed_up = models.BooleanField(default=True)
+
+    @property
+    def safe_student_id(self):
+        return self.student_id if self.student_id else None
+
+    @property
+    def safe_class_id(self):
+        return self.class_id if self.class_id else None
 
     class Meta:
         # Make it unique for day-month-year?
         unique_together = ("student_id", "class_id", "attendance_date")
 
     def save(self, *args, **kwargs):
-        if self.student_id and not self.student_name:
-            self.student_name = f"{self.student_id.first_name} {self.student_id.last_name}"
+        if self.student_id and not self.student_first_name:
+            self.student_first_name = f"{self.student_id.first_name}"
+        if self.student_id and not self.student_last_name:
+            self.student_last_name = f"{self.student_id.last_name}"
         if self.class_id and not self.class_name:
             self.class_name = f"{self.class_id.name}"
         super().save(*args, **kwargs)

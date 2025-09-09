@@ -536,11 +536,11 @@ def attendance_list(request):
 
     for att in attendances:
         str_date = att.attendance_date.isoformat()
-        str_class_id = str(att.class_id.id)
-        str_class_name = str(att.class_id.name)
-        str_student_id = str(att.student_id.id)
-        str_student_first_name = str(att.student_id.first_name)
-        str_student_last_name = str(att.student_id.last_name)
+        str_class_id = str(att.safe_class_id) if att.safe_class_id else ""
+        str_class_name = att.class_name or ""
+        str_student_id = str(att.safe_student_id) if att.safe_student_id else ""
+        str_student_first_name = att.student_first_name or ""
+        str_student_last_name = att.student_last_name or ""
 
         if str_date not in attendance_dict:
             attendance_dict[str_date] = {}
