@@ -51,11 +51,11 @@ class Attendance(models.Model):
 
     @property
     def safe_student_id(self):
-        return self.student_id if self.student_id else self.fallback_student_id
+        return self.student_id.id if self.student_id else self.fallback_student_id
 
     @property
     def safe_class_id(self):
-        return self.class_id if self.class_id else self.fallback_class_id
+        return self.class_id.id if self.class_id else self.fallback_class_id
 
     class Meta:
         # Make it unique for day-month-year?
