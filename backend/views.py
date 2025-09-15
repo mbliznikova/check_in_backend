@@ -473,8 +473,8 @@ def confirm(request):
         attendance_to_delete, attendance_to_update = [], []
 
         for attendance in attended_today:
-            student_id = attendance.student_id.id
-            class_id = attendance.class_id.id
+            student_id = attendance.safe_student_id # TODO: add more checks
+            class_id = attendance.safe_class_id
 
             if student_id not in confirmed_attendance or class_id not in confirmed_attendance[student_id]:
                 attendance_to_delete.append(attendance.id)
