@@ -536,9 +536,9 @@ def attendance_list(request):
 
     for att in attendances:
         str_date = att.attendance_date.isoformat()
-        str_class_id = str(att.safe_class_id) if att.safe_class_id else ""
+        str_class_id = str(att.safe_class_id or "")
         str_class_name = att.class_name or ""
-        str_student_id = str(att.safe_student_id) if att.safe_student_id else ""
+        str_student_id = str(att.safe_student_id or "")
         str_student_first_name = att.student_first_name or ""
         str_student_last_name = att.student_last_name or ""
 
