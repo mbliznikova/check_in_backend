@@ -7,6 +7,8 @@ class Student(models.Model):
     id = models.AutoField(primary_key=True)
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
+    is_liability_form_sent = models.BooleanField(default=False)
+    emergency_contacts = models.CharField(max_length=255, blank=True, default="")
 
     def __str__(self):
         return f'{self.first_name} {self.last_name}'
