@@ -261,6 +261,7 @@ def students(request):
 
     if request.method == "POST":
         try:
+            # TODO: check for and extract is_liability_form_sent and emergency_contacts
             request_body = json.loads(request.body)
             first_name = request_body.get("firstName", "")
             last_name = request_body.get("lastName", "")
@@ -268,6 +269,7 @@ def students(request):
             if not first_name or not last_name:
                 return make_error_json_response("First and last name should not be empty", 400)
 
+            # TODO: add is_liability_form_sent and emergency_contacts
             data_to_write = {
                 "first_name": first_name,
                 "last_name": last_name,
@@ -279,6 +281,7 @@ def students(request):
             else:
                 return make_error_json_response(serializer.errors, 400)
 
+            # TODO: add is_liability_form_sent and emergency_contacts
             respone = StudentSerializer.dict_to_camel_case(
                 {
                     "message": "Student was created successfully",
@@ -303,15 +306,30 @@ def edit_student(request, student_id):
             student_instance = Student.objects.get(id=student_id)
 
             request_body = json.loads(request.body)
-            first_name = request_body.get("firstName", "")
-            last_name = request_body.get("lastName", "")
+            first_name = request_body.get("firstName")
+            last_name = request_body.get("lastName")
+            is_liability_form_sent = request_body.get("isLiabilityFormSent")
+            emergency_contacts = request_body.get("emergencyContacts")
 
-            if not first_name or not last_name:
-                return make_error_json_response("Missing required fields", 400)
+            if first_name is not None:
+                if not first_name.strip():
+                    return make_error_json_response("First name cannot be empty", 400)
+                student_instance.first_name = first_name
 
-            student_instance.first_name = first_name
-            student_instance.last_name = last_name
+            if last_name is not None:
+                if not last_name.strip():
+                    return make_error_json_response("Last name cannot be empty", 400)
+                student_instance.last_name = last_name
+
+            if is_liability_form_sent is not None:
+                student_instance.is_liability_form_sent = is_liability_form_sent
+
+            if emergency_contacts is not None:
+                student_instance.emergency_contacts = emergency_contacts
+
             student_instance.save()
+
+            #TODO: update the tests
 
             response = StudentSerializer.dict_to_camel_case(
                 {
@@ -319,6 +337,8 @@ def edit_student(request, student_id):
                     "student_id": student_instance.id,
                     "first_name": student_instance.first_name,
                     "last_name": student_instance.last_name,
+                    "is_liability_form_sent": student_instance.is_liability_form_sent,
+                    "emergency_contacts": student_instance.emergency_contacts,
                 }
             )
 
