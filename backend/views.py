@@ -261,19 +261,25 @@ def students(request):
 
     if request.method == "POST":
         try:
-            # TODO: check for and extract is_liability_form_sent and emergency_contacts
             request_body = json.loads(request.body)
             first_name = request_body.get("firstName", "")
             last_name = request_body.get("lastName", "")
+            is_liability_form_sent = request_body.get("isLiabilityFormSent")
+            emergency_contacts = request_body.get("emergencyContacts")
 
             if not first_name or not last_name:
                 return make_error_json_response("First and last name should not be empty", 400)
 
-            # TODO: add is_liability_form_sent and emergency_contacts
             data_to_write = {
                 "first_name": first_name,
                 "last_name": last_name,
             }
+
+            if is_liability_form_sent is not None:
+                data_to_write["is_liability_form_sent"] = is_liability_form_sent
+
+            if emergency_contacts is not None:
+                data_to_write["emergency_contacts"] = emergency_contacts
 
             serializer = StudentSerializer(data=data_to_write)
             if serializer.is_valid():
@@ -281,13 +287,14 @@ def students(request):
             else:
                 return make_error_json_response(serializer.errors, 400)
 
-            # TODO: add is_liability_form_sent and emergency_contacts
             respone = StudentSerializer.dict_to_camel_case(
                 {
                     "message": "Student was created successfully",
                     "student_id": saved_student.id,
                     "first_name": saved_student.first_name,
                     "last_name": saved_student.last_name,
+                    "is_liability_form_sent": saved_student.is_liability_form_sent,
+                    "emergency_contacts": saved_student.emergency_contacts,
                 }
             )
 
