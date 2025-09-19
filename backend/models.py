@@ -16,6 +16,7 @@ class Student(models.Model):
 class ClassModel(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=50, unique=True)
+    duration_minutes = models.PositiveIntegerField(default=60)
 
     def __str__(self):
         return self.name
