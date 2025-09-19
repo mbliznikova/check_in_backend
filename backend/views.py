@@ -58,6 +58,7 @@ def classes(request):
         try:
             request_body = json.loads(request.body)
             name = request_body.get("name", "")
+            duration_minutes = request_body.get("durationMinutes")
 
             if not name:
                 return make_error_json_response("Class name should not be empty", 400)
@@ -65,6 +66,9 @@ def classes(request):
             data_to_write = {
                 "name": name
             }
+
+            if duration_minutes is not None:
+                data_to_write["duration_minutes"] = duration_minutes
 
             serializer = ClassModelSerializer(data=data_to_write)
             if serializer.is_valid():
@@ -77,6 +81,7 @@ def classes(request):
                     "message": "Class was created successfully",
                     "id": saved_class.id,
                     "name": saved_class.name,
+                    "duration_minutes": saved_class.duration_minutes,
                 }
             )
 
@@ -95,12 +100,19 @@ def edit_class(request, class_id):
             class_instance = ClassModel.objects.get(id=class_id)
 
             request_body = json.loads(request.body)
-            class_name = request_body.get("name", "")
+            class_name = request_body.get("name")
+            duration_minutes = request_body.get("durationMinutes")
 
-            if not class_name:
-                return make_error_json_response("Missing required fields", 400)
+            # TODO: update tests
 
-            class_instance.name = class_name
+            if class_name is not None:
+                if not class_name.strip():
+                    return make_error_json_response("Class name cannot be empty", 400)
+                class_instance.name = class_name
+
+            if duration_minutes is not None: # TODO: add checks?
+                class_instance.duration_minutes = duration_minutes
+
             class_instance.save()
 
             response = ClassModelSerializer.dict_to_camel_case(
@@ -108,6 +120,7 @@ def edit_class(request, class_id):
                     "message": "Class was updated successfully",
                     "class_id": class_instance.id,
                     "class_name": class_instance.name,
+                    "duration_minutes": class_instance.duration_minutes,
                 }
             )
 
