@@ -1,6 +1,6 @@
 import json
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.db.models import Sum
 from django.shortcuts import render
@@ -9,10 +9,12 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.timezone import now, is_naive, make_aware
 from django.utils.dateparse import parse_datetime, parse_time
+from django.core.exceptions import ObjectDoesNotExist
 
 from .models import ClassModel, Student, Day, Schedule, Attendance, Price, Payment
 from .serializers import CaseSerializer, StudentSerializer, ClassModelSerializer, AttendanceSerializer, PaymentSerializer, MonthlyPaymentsSummary, ScheduleSerializer
 
+# TODO: have parameters more consistent, i.e. have status code at the same order
 def make_error_json_response(error_message, status_code):
     return JsonResponse({"error": error_message}, status=status_code)
 
@@ -258,6 +260,78 @@ def schedules(request):
             return make_error_json_response("Invalid JSON", 400)
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def available_time_slots(request):
+    day_param = request.GET.get("day")
+    duration_minutes_param = request.GET.get("duration")
+
+    if not day_param:
+        return make_error_json_response("Day was not provided", 400)
+    if not duration_minutes_param:
+        return make_error_json_response("Class duration was not provided", 400)
+
+    try:
+        duration_minutes = int(duration_minutes_param)
+        if duration_minutes <= 0:
+            return make_error_json_response("Class duration must be positive", 400)
+    except ValueError:
+        return make_error_json_response("Invalid duration_minutes format", 400)
+
+    try:
+        day_obj = Day.objects.get(name__iexact=day_param.strip())
+    except ObjectDoesNotExist:
+        return make_error_json_response(f"Day {day_param} does not exist", 400)
+
+    schedules = Schedule.objects.filter(day=day_obj)
+
+    available_slots = calculate_available_time_slots(schedules, duration_minutes)
+
+    response = CaseSerializer.dict_to_camel_case(
+        {
+            "message": "Available time slots",
+            "available_slots": available_slots,
+        }
+    )
+
+    return make_success_json_response(200, response_body=response)
+
+def calculate_available_time_slots(schedules, duration_to_fit, step_minutes=30):
+    available_slots, taken_slots = [], []
+    base_date = datetime.today().date() # Can't substract datetime.time: convert to datetime.datetime
+
+    for schedule in schedules:
+        start_time = datetime.combine(base_date, schedule.class_time)
+        class_duration = schedule.class_model.duration_minutes
+        end_time = start_time + timedelta(minutes=class_duration)
+        taken_slots.append({"start_time": start_time, "end_time": end_time})
+
+    len_taken_slots = len(taken_slots)
+
+    for i in range (len_taken_slots - 1):
+        window_start = taken_slots[i]["end_time"]
+        window_end = taken_slots[i + 1]["start_time"]
+
+        time_interval = window_end - window_start
+        interval_minutes = int(time_interval.total_seconds() // 60)
+        print(f"DEBUG. Interval {window_start.time()} - {window_end.time()}, {interval_minutes} minutes free")
+
+        if interval_minutes < duration_to_fit:
+            print("Time window is too small, can't fit given duration")
+            continue
+        else:
+            duration = timedelta(minutes=duration_to_fit)
+            step = timedelta(minutes=step_minutes)
+            candidate_start = window_start
+
+            while candidate_start + duration <= window_end:
+                available_slots.append(candidate_start.time().strftime("%H:%M"))
+                candidate_start += step
+
+    # handle the edge cases for business hours, 8-20 for example
+
+    return available_slots
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
