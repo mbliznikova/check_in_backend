@@ -297,9 +297,15 @@ def available_time_slots(request):
 
     return make_success_json_response(200, response_body=response)
 
-def calculate_available_time_slots(schedules, duration_to_fit, step_minutes=30):
+# TODO: have defaults set globally
+def calculate_available_time_slots(schedules, duration_to_fit, step_minutes=30,
+                                   day_start="08:00", day_end="21:00"):
     available_slots, taken_slots = [], []
     base_date = datetime.today().date() # Can't substract datetime.time: convert to datetime.datetime
+
+    dummy_day_start_class = datetime.combine(base_date, datetime.strptime(day_start, "%H:%M").time())
+    dummy_day_end_class = datetime.combine(base_date, datetime.strptime(day_end, "%H:%M").time())
+    taken_slots.append({"start_time": dummy_day_start_class, "end_time": dummy_day_start_class})
 
     for schedule in schedules:
         start_time = datetime.combine(base_date, schedule.class_time)
@@ -307,7 +313,11 @@ def calculate_available_time_slots(schedules, duration_to_fit, step_minutes=30):
         end_time = start_time + timedelta(minutes=class_duration)
         taken_slots.append({"start_time": start_time, "end_time": end_time})
 
+    taken_slots.append({"start_time": dummy_day_end_class, "end_time": dummy_day_end_class})
+
     len_taken_slots = len(taken_slots)
+
+    taken_slots = sorted(taken_slots, key=lambda x: x["start_time"])
 
     for i in range (len_taken_slots - 1):
         window_start = taken_slots[i]["end_time"]
@@ -315,10 +325,8 @@ def calculate_available_time_slots(schedules, duration_to_fit, step_minutes=30):
 
         time_interval = window_end - window_start
         interval_minutes = int(time_interval.total_seconds() // 60)
-        print(f"DEBUG. Interval {window_start.time()} - {window_end.time()}, {interval_minutes} minutes free")
 
         if interval_minutes < duration_to_fit:
-            print("Time window is too small, can't fit given duration")
             continue
         else:
             duration = timedelta(minutes=duration_to_fit)
@@ -328,8 +336,6 @@ def calculate_available_time_slots(schedules, duration_to_fit, step_minutes=30):
             while candidate_start + duration <= window_end:
                 available_slots.append(candidate_start.time().strftime("%H:%M"))
                 candidate_start += step
-
-    # handle the edge cases for business hours, 8-20 for example
 
     return available_slots
 
