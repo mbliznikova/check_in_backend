@@ -885,7 +885,7 @@ class SchedulesTestCase(TestCase):
         )
 
         with self.assertRaises(IntegrityError):
-            with transaction.atomic:
+            with transaction.atomic():
                 Schedule.objects.create(
                     class_model=self.class_two,
                     day=self.day_one,
