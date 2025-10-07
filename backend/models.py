@@ -20,7 +20,7 @@ class ClassModel(models.Model):
 
     def __str__(self):
         return self.name
-    
+
 class Day(models.Model):
     name = models.CharField(max_length=20, unique=True)
 
@@ -37,6 +37,39 @@ class Schedule(models.Model):
 
     def __str__(self):
         return f'{self.class_model.name} on {self.day.name} at {self.class_time}'
+
+class ClassOccurrence(models.Model):
+    id = models.AutoField(primary_key=True)
+    class_model = models.ForeignKey(ClassModel, on_delete=models.SET_NULL, null=True, blank=True)
+    fallback_class_name = models.CharField(max_length=100, blank=True)
+    schedule = models.ForeignKey(Schedule, on_delete=models.SET_NULL, null=True, blank=True)
+    planned_date = models.DateField()
+    actual_date = models.DateField()
+    planned_start_time = models.TimeField()
+    actual_start_time = models.TimeField()
+    planned_duration = models.PositiveIntegerField()
+    actual_duration = models.PositiveIntegerField()
+    is_cancelled = models.BooleanField(default=False)
+    notes = models.TextField(blank=True, default='')
+
+    # TODO: add indexing?
+
+    class Meta:
+        unique_together = ("fallback_class_name", "actual_date", "actual_start_time")
+
+    def save(self, *args, **kwargs):
+        if self.class_model:
+            if not self.fallback_class_name:
+                self.fallback_class_name = self.class_model.name
+
+        super().save(*args, **kwargs)
+
+    @property
+    def safe_class_name(self):
+        return self.class_model.name if self.class_model else self.fallback_class_name
+
+    def __str__(self):
+        return f'{self.fallback_class_name} at {self.date} on {self.actual_start_time}'
 
 class Attendance(models.Model):
     id = models.AutoField(primary_key=True)
