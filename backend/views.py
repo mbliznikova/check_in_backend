@@ -1,8 +1,8 @@
 import json
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_http_methods
@@ -11,8 +11,8 @@ from django.utils.timezone import now, is_naive, make_aware
 from django.utils.dateparse import parse_datetime, parse_time
 from django.core.exceptions import ObjectDoesNotExist
 
-from .models import ClassModel, Student, Day, Schedule, Attendance, Price, Payment
-from .serializers import CaseSerializer, StudentSerializer, ClassModelSerializer, AttendanceSerializer, PaymentSerializer, MonthlyPaymentsSummary, ScheduleSerializer
+from .models import ClassModel, Student, Day, Schedule, Attendance, Price, Payment, ClassOccurrence
+from .serializers import CaseSerializer, StudentSerializer, ClassModelSerializer, AttendanceSerializer, PaymentSerializer, MonthlyPaymentsSummary, ScheduleSerializer, ClassOccurrenceSerializer
 
 # TODO: have parameters more consistent, i.e. have status code at the same order
 def make_error_json_response(error_message, status_code):
@@ -93,6 +93,18 @@ def classes(request):
             return make_error_json_response("Invalid JSON", 400)
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+
+def today_class_occurrences(request):
+    today_day = date.today()
+    occurrences = ClassOccurrence.objects.filter(Q(planned_date=today_day) | Q(actual_date=today_day))
+
+    serializer = ClassOccurrenceSerializer(occurrences, many=True)
+
+    response = {
+        "response": serializer.data
+    }
+
+    return make_success_json_response(200, response_body=response)
 
 @csrf_exempt
 @require_http_methods(["PUT"])

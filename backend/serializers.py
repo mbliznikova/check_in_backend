@@ -1,7 +1,7 @@
 import re
 
 from rest_framework import serializers
-from .models import Student, ClassModel, Day, Schedule, Attendance, Payment, Price, MonthlyPaymentsSummary
+from .models import Student, ClassModel, Day, Schedule, Attendance, Payment, Price, MonthlyPaymentsSummary, ClassOccurrence
 
 class CaseSerializer(serializers.ModelSerializer):
     """
@@ -38,6 +38,11 @@ class StudentSerializer(CaseSerializer):
 class ClassModelSerializer(CaseSerializer):
     class Meta:
         model = ClassModel
+        fields = '__all__'
+
+class ClassOccurrenceSerializer(CaseSerializer):
+    class Meta:
+        model = ClassOccurrence
         fields = '__all__'
 
 class DaySerializer(CaseSerializer):
