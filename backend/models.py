@@ -55,6 +55,13 @@ class ClassOccurrence(models.Model):
 
     # TODO: add indexing?
 
+    @property
+    def safe_class_name(self):
+        return self.class_model.name if self.class_model else self.fallback_class_name
+
+    def __str__(self):
+        return f'{self.fallback_class_name} at {self.date} on {self.actual_start_time}'
+
     class Meta:
         unique_together = ("fallback_class_name", "actual_date", "actual_start_time")
 
@@ -65,24 +72,18 @@ class ClassOccurrence(models.Model):
 
         super().save(*args, **kwargs)
 
-    @property
-    def safe_class_name(self):
-        return self.class_model.name if self.class_model else self.fallback_class_name
-
-    def __str__(self):
-        return f'{self.fallback_class_name} at {self.date} on {self.actual_start_time}'
-
 class Attendance(models.Model):
     id = models.AutoField(primary_key=True)
     # TODO: rename student_id and class_id to student_model and class_model?
     # Backlog? Since it would require changes in FE as well.
     student_id = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True)
-    class_id = models.ForeignKey(ClassModel, on_delete=models.SET_NULL, null=True)
+    class_id = models.ForeignKey(ClassModel, on_delete=models.SET_NULL, null=True) # TODO: rename to class_model?
     fallback_class_id = models.IntegerField(null=True, blank=True)
     fallback_student_id = models.IntegerField(null=True, blank=True)
     student_first_name = models.CharField(max_length=50, blank=True)
     student_last_name = models.CharField(max_length=50, blank=True)
     class_name = models.CharField(max_length=50, blank=True)
+    class_occurrence = models.ForeignKey(ClassOccurrence, on_delete=models.SET_NULL, null=True, blank=True)
     attendance_date = models.DateField(default=datetime.date.today)
     is_showed_up = models.BooleanField(default=True)
 
@@ -95,7 +96,7 @@ class Attendance(models.Model):
         return self.class_id.id if self.class_id else self.fallback_class_id
 
     class Meta:
-        # Make it unique for day-month-year?
+        # Make it unique for day-month-year? class occurrence?
         unique_together = ("student_id", "class_id", "attendance_date")
 
     def save(self, *args, **kwargs):
@@ -105,6 +106,9 @@ class Attendance(models.Model):
                 self.student_first_name = self.student_id.first_name
             if not self.student_last_name:
                 self.student_last_name = self.student_id.last_name
+
+        if self.class_occurrence and not self.class_id:
+            self.class_id = self.class_occurrence.class_model
 
         if self.class_id:
             self.fallback_class_id = self.class_id.id
