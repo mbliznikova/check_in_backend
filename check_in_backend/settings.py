@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-lxls!bkju%id$mpi-0cg!xa6vj%q6ylpcqczd_cwj*7^ptfoss
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["192.168.1.230", "192.168.16.53"]
 
 
 # Application definition
@@ -129,3 +129,33 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "UTC"
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "file": {
+            "level": "ERROR",
+            "class": "logging.FileHandler",
+            "filename": "django_errors.log",
+        },
+        "console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console", "file"],
+            "level": "ERROR",
+            "propagate": True,
+        },
+    },
+}
