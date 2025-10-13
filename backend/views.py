@@ -624,8 +624,8 @@ def get_attended_students(request):
                     "id": student.id,
                     "first_name": student.first_name,
                     "last_name": student.last_name,
+                    "classes": [occ[-1] for occ in student_occurrence.get(student.id, [])],
                     "occurrences": [occ[0] for occ in student_occurrence.get(student.id, [])],
-                    "class_name": [occ[-1] for occ in student_occurrence.get(student.id, [])],
                 })
                 for student in students_attended_today_occ
             ]
