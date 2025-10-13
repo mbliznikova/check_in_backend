@@ -56,33 +56,37 @@ class ClassOccurrence(models.Model):
     # TODO: add indexing?
 
     @property
+    def safe_class_id(self):
+        return self.class_model.id if self.class_model else None
+
+    @property
     def safe_class_name(self):
         return self.class_model.name if self.class_model else self.fallback_class_name
 
     def __str__(self):
-        return f'{self.fallback_class_name} at {self.date} on {self.actual_start_time}'
+        return f'{self.fallback_class_name} at {self.actual_date} on {self.actual_start_time}'
 
     class Meta:
         unique_together = ("fallback_class_name", "actual_date", "actual_start_time")
 
     def save(self, *args, **kwargs):
-        if self.class_model:
-            if not self.fallback_class_name:
-                self.fallback_class_name = self.class_model.name
+        if self.class_model and not self.fallback_class_name:
+            self.fallback_class_name = self.class_model.name
 
         super().save(*args, **kwargs)
+
 
 class Attendance(models.Model):
     id = models.AutoField(primary_key=True)
     # TODO: rename student_id and class_id to student_model and class_model?
     # Backlog? Since it would require changes in FE as well.
-    student_id = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True)
-    class_id = models.ForeignKey(ClassModel, on_delete=models.SET_NULL, null=True) # TODO: rename to class_model?
+    student_id = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True) # TODO: rename to student?
+    class_id = models.ForeignKey(ClassModel, on_delete=models.SET_NULL, null=True) # TODO: rename to class_model? TO DELETE
     fallback_class_id = models.IntegerField(null=True, blank=True)
     fallback_student_id = models.IntegerField(null=True, blank=True)
     student_first_name = models.CharField(max_length=50, blank=True)
     student_last_name = models.CharField(max_length=50, blank=True)
-    class_name = models.CharField(max_length=50, blank=True)
+    class_name = models.CharField(max_length=50, blank=True) # TODO: rename to fallback_class_name?
     class_occurrence = models.ForeignKey(ClassOccurrence, on_delete=models.SET_NULL, null=True, blank=True)
     attendance_date = models.DateField(default=datetime.date.today)
     is_showed_up = models.BooleanField(default=True)
@@ -91,9 +95,26 @@ class Attendance(models.Model):
     def safe_student_id(self):
         return self.student_id.id if self.student_id else self.fallback_student_id
 
+    # @property # TODO: shouldn't it be rather class name? TO DELETE
+    # def safe_class_id(self):
+    #     return self.class_id.id if self.class_id else self.fallback_class_id
+
     @property
     def safe_class_id(self):
-        return self.class_id.id if self.class_id else self.fallback_class_id
+        if self.class_occurrence:
+            return self.class_occurrence.safe_class_id
+        return self.fallback_class_id
+
+    #TODO: add safe class occurrence? Like name - date? Or just id?
+    @property
+    def safe_occurrence_id(self):
+        return self.class_occurrence.id if self.class_occurrence else None # TODO: have it always present, like fallback?
+
+    @property
+    def safe_class_name(self):
+        if self.class_occurrence:
+            return self.class_occurrence.safe_class_name
+        return self.fallback_class_name or "Unknown"
 
     class Meta:
         # Make it unique for day-month-year? class occurrence?
@@ -107,13 +128,19 @@ class Attendance(models.Model):
             if not self.student_last_name:
                 self.student_last_name = self.student_id.last_name
 
-        if self.class_occurrence and not self.class_id:
-            self.class_id = self.class_occurrence.class_model
+        if self.class_occurrence:
+            class_model = self.class_occurrence.class_model
+            if class_model:
+                self.fallback_class_id = class_model.id
+                self.class_name = class_model.name
+            # self.class_id = self.class_occurrence.class_model
+            elif not self.fallback_class_name:
+                self.fallback_class_name = self.class_occurrence.fallback_class_name
 
-        if self.class_id:
-            self.fallback_class_id = self.class_id.id
-            if not self.class_name:
-                self.class_name = self.class_id.name
+        # if self.class_id: # TODO: to delete
+        #     self.fallback_class_id = self.class_id.id
+        #     if not self.class_name:
+        #         self.class_name = self.class_id.name
 
         super().save(*args, **kwargs)
 
