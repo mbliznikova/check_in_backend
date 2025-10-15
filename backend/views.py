@@ -504,7 +504,7 @@ def check_in(request):
         if not student_id or not today_date:
             return make_error_json_response("Missing required fields", 400)
 
-        use_occurrence = bool(class_occurrences_list) # Use if provided, otherwise fall back to classes_list. Transition.
+        use_occurrence = "classOccurrencesList" in check_in_data # Use if provided, otherwise fall back to classes_list. Transition.
 
         if use_occurrence:
             print("CHECK-IN DEBUG! USING OCCURRENCES!")
@@ -564,6 +564,7 @@ def check_in(request):
 
             if classes_to_delete:
                 Attendance.objects.filter(student_id=student_id, attendance_date=today_date, class_id__in=classes_to_delete).delete()
+                print(f"DEBUG! TO DELETE IS {classes_to_delete}")
 
                 for cls in classes_to_delete:
                     classes_to_delete_response.append(cls)
@@ -632,7 +633,7 @@ def get_attended_students(request):
         })
     # print(f"get_attended_students DEBUG! NEW! response_new is {response_new}")
 
-    return make_success_json_response(200, response_body=response)
+    return make_success_json_response(200, response_body=response_new)
 
 @csrf_exempt
 @require_http_methods(["PUT"])
@@ -793,7 +794,8 @@ def attendance_list(request):
         if str_occurrence not in attendance_dict_new[str_date]: # NEW
            attendance_dict_new[str_date][str_occurrence] = {
                "name": str_class_name,
-               "students": {}
+               "students": {},
+               "occurrence": str_occurrence,
            }
         # =======
 
@@ -831,7 +833,7 @@ def attendance_list(request):
         result_list_new.append(
             CaseSerializer.dict_to_camel_case({
                 "date": date,
-                "classes": class_data,
+                "classes": class_data, # TODO: have occurrences?
             })
         )
     # =======
