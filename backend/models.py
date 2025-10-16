@@ -114,7 +114,7 @@ class Attendance(models.Model):
     def safe_class_name(self):
         if self.class_occurrence:
             return self.class_occurrence.safe_class_name
-        return self.fallback_class_name or "Unknown"
+        return self.class_name or "Unknown" # TODO: handle 'Attendance' object has no attribute 'fallback_class_name'
 
     class Meta:
         # Make it unique for day-month-year? class occurrence?

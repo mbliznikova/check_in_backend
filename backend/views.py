@@ -770,11 +770,13 @@ def attendance_list(request):
     for att in attendances:
         str_date = att.attendance_date.isoformat()
         str_class_id = str(att.safe_class_id or "")
-        str_class_name = att.class_name or ""
+        str_class_name = att.safe_class_name or ""
         str_student_id = str(att.safe_student_id or "")
         str_student_first_name = att.student_first_name or ""
         str_student_last_name = att.student_last_name or ""
         str_occurrence = str(att.class_occurrence or "") # NEW
+        str_occurrence_id = str(att.safe_occurrence_id or "") # NEW
+        str_actual_time = str(att.class_occurrence.actual_start_time if att.class_occurrence else "") # TODO: make safe
         # print(f"DEBUG attendance_list: str_occurrence is {str_occurrence}") #TODO: have safe class occurrence in right format, see str_class_id = str(att.safe_class_id or "")
 
         if str_date not in attendance_dict:
@@ -792,10 +794,12 @@ def attendance_list(request):
 
         # ======= NEW
         if str_occurrence not in attendance_dict_new[str_date]: # NEW
-           attendance_dict_new[str_date][str_occurrence] = {
-               "name": str_class_name,
+        #    attendance_dict_new[str_date][str_occurrence] = {
+           attendance_dict_new[str_date][str_occurrence_id] = {
+               "name": str_class_name, # TODO: rename to occurrence_name?
+               "time": str_actual_time,
                "students": {},
-               "occurrence": str_occurrence,
+            #    "occurrence": str_occurrence,
            }
         # =======
 
@@ -807,7 +811,7 @@ def attendance_list(request):
         # print(f"DEBUG OLD attendance_list! attendance_dict is {attendance_dict}")
 
         # ======= NEW
-        attendance_dict_new[str_date][str_occurrence]["students"][str_student_id] = CaseSerializer.dict_to_camel_case({ # NEW
+        attendance_dict_new[str_date][str_occurrence_id]["students"][str_student_id] = CaseSerializer.dict_to_camel_case({ # NEW
             "first_name": str_student_first_name,
             "last_name": str_student_last_name,
             "is_showed_up": att.is_showed_up
@@ -825,7 +829,6 @@ def attendance_list(request):
                 "classes": class_data,
             })
         )
-    # print(f"DEBUG OLD attendance_list! result_list is {result_list}")
 
     # ======= NEW
     result_list_new = []
@@ -833,14 +836,13 @@ def attendance_list(request):
         result_list_new.append(
             CaseSerializer.dict_to_camel_case({
                 "date": date,
-                "classes": class_data, # TODO: have occurrences?
+                "occurrences": class_data, # TODO: have occurrences?
             })
         )
     # =======
-    # print(f"DEBUG NEW attendance_list! esult_list_new is {result_list_new}")
 
     response = {
-        "response": result_list
+        "response": result_list_new
     }
 
     return make_success_json_response(200, response_body=response)
