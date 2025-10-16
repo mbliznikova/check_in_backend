@@ -780,10 +780,9 @@ def attendance_list(request):
         str_student_id = str(att.safe_student_id or "")
         str_student_first_name = att.student_first_name or ""
         str_student_last_name = att.student_last_name or ""
-        str_occurrence = str(att.class_occurrence or "") # NEW
         str_occurrence_id = str(att.safe_occurrence_id or "") # NEW
+        # str_occurrence_id = str(att.safe_occurrence_id or f"class_{att.safe_class_id or 'none'}")
         str_actual_time = str(att.class_occurrence.actual_start_time if att.class_occurrence else "") # TODO: make safe
-        # print(f"DEBUG attendance_list: str_occurrence is {str_occurrence}") #TODO: have safe class occurrence in right format, see str_class_id = str(att.safe_class_id or "")
 
         if str_date not in attendance_dict:
             attendance_dict[str_date] = {}
@@ -799,11 +798,12 @@ def attendance_list(request):
            }
 
         # ======= NEW
-        if str_occurrence not in attendance_dict_new[str_date]: # NEW
+        if str_occurrence_id not in attendance_dict_new[str_date]: # NEW
         #    attendance_dict_new[str_date][str_occurrence] = {
            attendance_dict_new[str_date][str_occurrence_id] = {
                "name": str_class_name, # TODO: rename to occurrence_name?
                "time": str_actual_time,
+               "class_id": str_class_id,
                "students": {},
             #    "occurrence": str_occurrence,
            }
