@@ -716,11 +716,17 @@ def confirm(request):
         print(f"DEBUG NEW to_update {to_update}, to_delete {to_delete}")
         # ======
 
-        if attendance_to_delete:
-            Attendance.objects.filter(id__in=attendance_to_delete).delete()
+        # if attendance_to_delete:
+        #     Attendance.objects.filter(id__in=attendance_to_delete).delete()
 
-        if attendance_to_update:
-            Attendance.objects.bulk_update(attendance_to_update, ["is_showed_up"])
+        # if attendance_to_update:
+        #     Attendance.objects.bulk_update(attendance_to_update, ["is_showed_up"])
+
+        if to_delete:
+            Attendance.objects.filter(id__in=to_delete).delete()
+
+        if to_update:
+            Attendance.objects.bulk_update(to_update, ["is_showed_up"])
 
         response = {
             "message": "Attendance confirmed successfully"
