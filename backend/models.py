@@ -64,7 +64,9 @@ class ClassOccurrence(models.Model):
         return self.class_model.name if self.class_model else self.fallback_class_name
 
     def __str__(self):
-        return f'{self.fallback_class_name} at {self.actual_date} on {self.actual_start_time}'
+        date = self.actual_date or self.planned_date or "unknown date"
+        time = self.actual_start_time or self.planned_start_time or "unknown time"
+        return f'{self.safe_class_name} at {date} on {time}'
 
     class Meta:
         unique_together = ("fallback_class_name", "actual_date", "actual_start_time")
@@ -81,7 +83,6 @@ class Attendance(models.Model):
     # TODO: rename student_id and class_id to student_model and class_model?
     # Backlog? Since it would require changes in FE as well.
     student_id = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True) # TODO: rename to student?
-    class_id = models.ForeignKey(ClassModel, on_delete=models.SET_NULL, null=True) # TODO: rename to class_model? TO DELETE
     fallback_class_id = models.IntegerField(null=True, blank=True)
     fallback_student_id = models.IntegerField(null=True, blank=True)
     student_first_name = models.CharField(max_length=50, blank=True)
@@ -94,10 +95,6 @@ class Attendance(models.Model):
     @property
     def safe_student_id(self):
         return self.student_id.id if self.student_id else self.fallback_student_id
-
-    # @property # TODO: shouldn't it be rather class name? TO DELETE
-    # def safe_class_id(self):
-    #     return self.class_id.id if self.class_id else self.fallback_class_id
 
     @property
     def safe_class_id(self):
@@ -118,7 +115,10 @@ class Attendance(models.Model):
 
     class Meta:
         # Make it unique for day-month-year? class occurrence?
-        unique_together = ("student_id", "class_id", "attendance_date")
+        unique_together = ("student_id", "class_occurrence")
+
+    def __str__(self):
+        return f"{self.safe_student_id} - {self.safe_class_name} ({self.attendance_date})"
 
     def save(self, *args, **kwargs):
         if self.student_id:
@@ -133,14 +133,12 @@ class Attendance(models.Model):
             if class_model:
                 self.fallback_class_id = class_model.id
                 self.class_name = class_model.name
-            # self.class_id = self.class_occurrence.class_model
-            elif not self.fallback_class_name:
-                self.fallback_class_name = self.class_occurrence.fallback_class_name
+            elif not self.class_name:
+                self.fallback_class_id = self.class_occurrence.safe_class_id # TODO: still not safe enough
+                self.class_name = self.class_occurrence.fallback_class_name
 
-        # if self.class_id: # TODO: to delete
-        #     self.fallback_class_id = self.class_id.id
-        #     if not self.class_name:
-        #         self.class_name = self.class_id.name
+            if not self.attendance_date:
+                self.attendance_date = self.class_occurrence.actual_date
 
         super().save(*args, **kwargs)
 
