@@ -497,85 +497,47 @@ def check_in(request):
         # Check if body?
         check_in_data = request_body.get("checkInData", {})
         student_id = check_in_data.get("studentId")
-        classes_list = check_in_data.get("classesList", []) # TODO: class_occurences_list? Have occurrence for each class?
         class_occurrences_list = check_in_data.get("classOccurrencesList", [])
         today_date = check_in_data.get("todayDate")
 
         if not student_id or not today_date:
             return make_error_json_response("Missing required fields", 400)
 
-        use_occurrence = "classOccurrencesList" in check_in_data # Use if provided, otherwise fall back to classes_list. Transition.
+        # TODO: add parsing for today_date?
+        existing_occurrences = set(Attendance.objects.filter(student_id=student_id, attendance_date=today_date).values_list("class_occurrence", flat=True))
+        to_add = set(class_occurrences_list) - existing_occurrences
+        to_delete = existing_occurrences - set(class_occurrences_list)
 
-        if use_occurrence:
-            print("CHECK-IN DEBUG! USING OCCURRENCES!")
-            existing_occurrences = set(Attendance.objects.filter(student_id=student_id, attendance_date=today_date).values_list("class_occurrence", flat=True))
-            to_add = set(class_occurrences_list) - existing_occurrences
-            to_delete = existing_occurrences - set(class_occurrences_list)
+        to_add_response, to_delete_response = [], []
 
-            to_add_response, to_delete_response = [], []
+        for occ in to_add:
+            data_to_write = {
+                "student_id": student_id,
+                "class_occurrence": occ,
+                "attendance_date": today_date,
+            }
 
-            for occ in to_add:
-                data_to_write = {
-                    "student_id": student_id,
-                    "class_occurrence": occ,
-                    # "class_id": classes_list[0] if classes_list else 3, # TODO: REMOVE class_id field from Attendance model when ready
-                    "attendance_date": today_date,
-                }
+            serializer = AttendanceSerializer(data=data_to_write)
 
-                serializer = AttendanceSerializer(data=data_to_write)
-                print(f"DEBUG! To add is {data_to_write}")
+            if serializer.is_valid():
+                serializer.save()
+                to_add_response.append(occ)
+            else:
+                return make_error_json_response(serializer.errors, 400)
 
-                if serializer.is_valid():
-                    serializer.save()
-                    to_add_response.append(occ)
-                else:
-                    return make_error_json_response(serializer.errors, 400)
+        if to_delete:
+            Attendance.objects.filter(student_id=student_id, attendance_date=today_date, class_occurrence__in=to_delete).delete()
 
-            if to_delete:
-                print(f"DEBUG! To delete is {Attendance.objects.filter(student_id=student_id, attendance_date=today_date, class_occurrence__in=to_delete)}")
-                Attendance.objects.filter(student_id=student_id, attendance_date=today_date, class_occurrence__in=to_delete).delete()
-
-                for occ in to_delete:
-                    to_delete_response.append(occ)
-
-        else:
-            print("CHECK-IN DEBUG! USING CLASSES!")
-            # TODO: add parsing for today_date
-            existing_classes = set(Attendance.objects.filter(student_id=student_id, attendance_date=today_date).values_list("class_id", flat=True))
-            classes_to_add = set(classes_list) - existing_classes
-            classes_to_delete = existing_classes - set(classes_list)
-
-            classes_to_add_response, classes_to_delete_response = [], []
-
-            # Can rewrite to use Attendance.objects.create() instead of using serializer, but then have to retrieve
-            # instance of Student by student_id and pass as a FK
-            for cls in classes_to_add:
-                data_to_write = {
-                        "student_id": student_id,
-                        "class_id": cls,
-                        "attendance_date": today_date,
-                    }
-                serializer = AttendanceSerializer(data=data_to_write)
-                if serializer.is_valid():
-                    serializer.save()
-                    classes_to_add_response.append(cls)
-                else:
-                    return make_error_json_response(serializer.errors, 400)
-
-            if classes_to_delete:
-                Attendance.objects.filter(student_id=student_id, attendance_date=today_date, class_id__in=classes_to_delete).delete()
-                print(f"DEBUG! TO DELETE IS {classes_to_delete}")
-
-                for cls in classes_to_delete:
-                    classes_to_delete_response.append(cls)
+            for occ in to_delete:
+                to_delete_response.append(occ)
 
         response = CaseSerializer.dict_to_camel_case(
             {
                 "message": "Check-in data was successfully updated",
                 "student_id": student_id,
                 "attendance_date": today_date,
-                "checked_in": classes_to_add_response if not use_occurrence else to_add_response,
-                "checked_out": classes_to_delete_response  if not use_occurrence else to_delete_response,
+                "checked_in": to_add_response,
+                "checked_out": to_delete_response,
             })
 
         return make_success_json_response(200, response_body=response)
@@ -596,28 +558,12 @@ def get_attended_students(request):
     for student_id, class_id in student_class_ids:
         student_classes.setdefault(student_id, []).append(class_id)
 
-    for student_id, occurrence_id, class_name in student_occurrence_ids: # new
+    for student_id, occurrence_id, class_name in student_occurrence_ids:
         student_occurrence.setdefault(student_id, []).append([occurrence_id, class_name])
 
-    students_attended_today = Student.objects.filter(id__in=student_classes.keys())
-    students_attended_today_occ = Student.objects.filter(id__in=student_occurrence.keys()) # new
+    students_attended_today_occ = Student.objects.filter(id__in=student_occurrence.keys())
 
     response = CaseSerializer.dict_to_camel_case(
-        {
-            "confirmed_attendance":
-            [
-                CaseSerializer.dict_to_camel_case({
-                    "id": student.id,
-                    "first_name": student.first_name,
-                    "last_name": student.last_name,
-                    "classes": student_classes.get(student.id, []),
-                })
-                for student in students_attended_today
-            ]
-        })
-    # print(f"get_attended_students DEBUG! OLD! response is {response}")
-
-    response_new = CaseSerializer.dict_to_camel_case(  # new
         {
             "confirmed_attendance":
             [
@@ -631,9 +577,8 @@ def get_attended_students(request):
                 for student in students_attended_today_occ
             ]
         })
-    # print(f"get_attended_students DEBUG! NEW! response_new is {response_new}")
 
-    return make_success_json_response(200, response_body=response_new)
+    return make_success_json_response(200, response_body=response)
 
 @csrf_exempt
 @require_http_methods(["PUT"])
@@ -651,76 +596,34 @@ def confirm(request):
             return make_error_json_response("Invalid data format: 'confirmationList' should be a list", 400)
 
         confirmed_attendance = {}
-        confirmed_attendance_new = {}
 
         for confirmation in confirmation_list:
             if not isinstance(confirmation, dict):
                 return make_error_json_response("Invalid data format: Each item in 'confirmationList' should be a dictionary", 400)
             confirmed_attendance.update(confirmation)
 
-        for confirmation in confirmation_list:
-            if not isinstance(confirmation, dict):
-                return make_error_json_response("Invalid data format: Each item in 'confirmationList' should be a dictionary", 400)
-            confirmed_attendance_new.update(confirmation)
-
         confirmed_attendance = {
-            int(student_id_key): {
-                    int(class_id_key): bool(value) for class_id_key, value in classes.items()
-                }
-                for student_id_key, classes in confirmed_attendance.items()
-        }
-        print(f"DEBUG confirm OLD confirmed_attendance is {confirmed_attendance}")
-
-        confirmed_attendance_new = { # NEW
             int(student_id_key): {
                     int(occurrence_id_key): bool(value) for occurrence_id_key, value in occurrences.items()
                 }
-                for student_id_key, occurrences in confirmed_attendance_new.items()
+                for student_id_key, occurrences in confirmed_attendance.items()
         }
-        print(f"DEBUG confirm NEW confirmed_attendance_new is {confirmed_attendance_new}")
 
-        attendance_to_delete, attendance_to_update = [], []
         to_delete, to_update = [], []
 
         for attendance in attended_today:
             student_id = attendance.safe_student_id # TODO: add more checks
-            class_id = attendance.safe_class_id
-
-            if student_id not in confirmed_attendance or class_id not in confirmed_attendance[student_id]:
-                attendance_to_delete.append(attendance.id)
-                continue
-
-            new_is_showed_up_value = confirmed_attendance.get(student_id, {}).get(class_id)
-
-            if attendance.is_showed_up != new_is_showed_up_value:
-                attendance.is_showed_up = new_is_showed_up_value
-                attendance_to_update.append(attendance)
-
-        print(f"DEBUG OLD attendance_to_update {attendance_to_update}, attendance_to_delete {attendance_to_delete}")
-
-        # ====== NEW
-        for attendance in attended_today:
-            student_id = attendance.safe_student_id # TODO: add more checks
             occurrence_id = attendance.safe_occurrence_id # <--- do we need it? Shouldn't it be rather name? 
 
-            if student_id not in confirmed_attendance_new or occurrence_id not in confirmed_attendance_new[student_id]:
+            if student_id not in confirmed_attendance or occurrence_id not in confirmed_attendance[student_id]:
                 to_delete.append(attendance.id)
                 continue
 
-            new_is_showed_up_value = confirmed_attendance_new.get(student_id, {}).get(occurrence_id)
+            new_is_showed_up_value = confirmed_attendance.get(student_id, {}).get(occurrence_id)
 
             if attendance.is_showed_up != new_is_showed_up_value:
                 attendance.is_showed_up = new_is_showed_up_value
                 to_update.append(attendance)
-
-        print(f"DEBUG NEW to_update {to_update}, to_delete {to_delete}")
-        # ======
-
-        # if attendance_to_delete:
-        #     Attendance.objects.filter(id__in=attendance_to_delete).delete()
-
-        # if attendance_to_update:
-        #     Attendance.objects.bulk_update(attendance_to_update, ["is_showed_up"])
 
         if to_delete:
             Attendance.objects.filter(id__in=to_delete).delete()
@@ -768,10 +671,7 @@ def attendance_list(request):
     else:
         attendances = Attendance.objects.all().order_by("-attendance_date")
 
-        # print(f"================DEBUG!!! attendances is {attendances}================")
-
     attendance_dict = {}
-    attendance_dict_new = {} # NEW
 
     for att in attendances:
         str_date = att.attendance_date.isoformat()
@@ -780,72 +680,37 @@ def attendance_list(request):
         str_student_id = str(att.safe_student_id or "")
         str_student_first_name = att.student_first_name or ""
         str_student_last_name = att.student_last_name or ""
-        str_occurrence_id = str(att.safe_occurrence_id or "") # NEW
+        str_occurrence_id = str(att.safe_occurrence_id or "")
         # str_occurrence_id = str(att.safe_occurrence_id or f"class_{att.safe_class_id or 'none'}")
         str_actual_time = str(att.class_occurrence.actual_start_time if att.class_occurrence else "") # TODO: make safe
 
         if str_date not in attendance_dict:
             attendance_dict[str_date] = {}
 
-
-        if str_date not in attendance_dict_new: # NEW
-            attendance_dict_new[str_date] = {}
-
-        if str_class_id not in attendance_dict[str_date]:
-           attendance_dict[str_date][str_class_id] = {
+        if str_occurrence_id not in attendance_dict[str_date]:
+           attendance_dict[str_date][str_occurrence_id] = {
                "name": str_class_name,
-               "students": {}
-           }
-
-        # ======= NEW
-        if str_occurrence_id not in attendance_dict_new[str_date]: # NEW
-        #    attendance_dict_new[str_date][str_occurrence] = {
-           attendance_dict_new[str_date][str_occurrence_id] = {
-               "name": str_class_name, # TODO: rename to occurrence_name?
                "time": str_actual_time,
                "class_id": str_class_id,
                "students": {},
-            #    "occurrence": str_occurrence,
            }
-        # =======
 
-        attendance_dict[str_date][str_class_id]["students"][str_student_id] = CaseSerializer.dict_to_camel_case({
+        attendance_dict[str_date][str_occurrence_id]["students"][str_student_id] = CaseSerializer.dict_to_camel_case({
             "first_name": str_student_first_name,
             "last_name": str_student_last_name,
             "is_showed_up": att.is_showed_up
         })
-        # print(f"DEBUG OLD attendance_list! attendance_dict is {attendance_dict}")
-
-        # ======= NEW
-        attendance_dict_new[str_date][str_occurrence_id]["students"][str_student_id] = CaseSerializer.dict_to_camel_case({ # NEW
-            "first_name": str_student_first_name,
-            "last_name": str_student_last_name,
-            "is_showed_up": att.is_showed_up
-        })
-        # =======
-        # print(f"DEBUG NEW attendance_list! attendance_dict_new is {attendance_dict_new}")
 
     # TODO: Write tests
 
-    result_list = []
-    for date, class_data in attendance_dict.items():
-        result_list.append(
-            CaseSerializer.dict_to_camel_case({
-                "date": date,
-                "classes": class_data,
-            })
-        )
-
-    # ======= NEW
     result_list_new = []
-    for date, class_data in attendance_dict_new.items():
+    for date, class_data in attendance_dict.items():
         result_list_new.append(
             CaseSerializer.dict_to_camel_case({
                 "date": date,
-                "occurrences": class_data, # TODO: have occurrences?
+                "occurrences": class_data,
             })
         )
-    # =======
 
     response = {
         "response": result_list_new
