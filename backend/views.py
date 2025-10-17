@@ -549,14 +549,9 @@ def check_in(request):
 
 def get_attended_students(request):
     attended_today = Attendance.objects.filter(attendance_date=now().date())
-    student_class_ids = attended_today.values_list("student_id", "class_id")
-    student_occurrence_ids = attended_today.values_list("student_id", "class_occurrence", "class_name") # new
+    student_occurrence_ids = attended_today.values_list("student_id", "class_occurrence", "class_name")
 
-    student_classes = {}
-    student_occurrence = {} # new
-
-    for student_id, class_id in student_class_ids:
-        student_classes.setdefault(student_id, []).append(class_id)
+    student_occurrence = {}
 
     for student_id, occurrence_id, class_name in student_occurrence_ids:
         student_occurrence.setdefault(student_id, []).append([occurrence_id, class_name])

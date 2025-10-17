@@ -73,19 +73,7 @@ class ScheduleSerializer(CaseSerializer):
 class AttendanceSerializer(CaseSerializer):
     class Meta:
         model = Attendance
-        # fields = '__all__'
-        fields = [ #TODO: update after removing class_id from Attendance model
-            'id',
-            'student_id',
-            'fallback_class_id',
-            'fallback_student_id',
-            'student_first_name',
-            'student_last_name',
-            'class_name',
-            'class_occurrence',
-            'attendance_date',
-            'is_showed_up'
-        ]
+        fields = '__all__'
 
 class PaymentSerializer(CaseSerializer):
     class Meta:
