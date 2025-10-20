@@ -61,6 +61,7 @@ def classes(request):
             request_body = json.loads(request.body)
             name = request_body.get("name", "")
             duration_minutes = request_body.get("durationMinutes")
+            is_recurring = request_body.get("isRecurring")
 
             if not name:
                 return make_error_json_response("Class name should not be empty", 400)
@@ -71,6 +72,9 @@ def classes(request):
 
             if duration_minutes is not None:
                 data_to_write["duration_minutes"] = duration_minutes
+
+            if is_recurring is not None:
+                data_to_write["is_recurring"] = is_recurring
 
             serializer = ClassModelSerializer(data=data_to_write)
             if serializer.is_valid():
@@ -84,6 +88,7 @@ def classes(request):
                     "id": saved_class.id,
                     "name": saved_class.name,
                     "duration_minutes": saved_class.duration_minutes,
+                    "is_recurring": saved_class.is_recurring,
                 }
             )
 
