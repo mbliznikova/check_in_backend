@@ -121,6 +121,7 @@ def edit_class(request, class_id):
             request_body = json.loads(request.body)
             class_name = request_body.get("name")
             duration_minutes = request_body.get("durationMinutes")
+            is_recurring = request_body.get("isRecurring")
 
             # TODO: update tests
 
@@ -132,6 +133,9 @@ def edit_class(request, class_id):
             if duration_minutes is not None: # TODO: add checks?
                 class_instance.duration_minutes = duration_minutes
 
+            if is_recurring != class_instance.is_recurring:
+                class_instance.is_recurring = is_recurring
+
             class_instance.save()
 
             response = ClassModelSerializer.dict_to_camel_case(
@@ -140,6 +144,7 @@ def edit_class(request, class_id):
                     "class_id": class_instance.id,
                     "class_name": class_instance.name,
                     "duration_minutes": class_instance.duration_minutes,
+                    "is_recurring": class_instance.is_recurring,
                 }
             )
 
