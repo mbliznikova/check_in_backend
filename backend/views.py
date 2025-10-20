@@ -133,7 +133,7 @@ def edit_class(request, class_id):
             if duration_minutes is not None: # TODO: add checks?
                 class_instance.duration_minutes = duration_minutes
 
-            if is_recurring != class_instance.is_recurring:
+            if is_recurring is not None and is_recurring != class_instance.is_recurring:
                 class_instance.is_recurring = is_recurring
 
             class_instance.save()
