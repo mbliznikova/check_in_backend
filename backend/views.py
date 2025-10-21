@@ -99,6 +99,13 @@ def classes(request):
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
+@csrf_exempt
+@require_http_methods(["POST"])
+def class_occurrences(request):
+    if request.method == "POST":
+        print("Adding new class occurrence")
+
+
 def today_class_occurrences(request):
     today_day = date.today()
     occurrences = ClassOccurrence.objects.filter(Q(planned_date=today_day) | Q(actual_date=today_day))
