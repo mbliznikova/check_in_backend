@@ -100,8 +100,18 @@ def classes(request):
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
 @csrf_exempt
-@require_http_methods(["POST"])
+@require_http_methods(["GET", "POST"])
 def class_occurrences(request):
+    if request.method == "GET":
+        occurrences = ClassOccurrence.objects.all()
+        serializer = ClassOccurrenceSerializer(occurrences, many=True)
+
+        response = {
+            "response": serializer.data
+        }
+
+        return JsonResponse(response)
+
     if request.method == "POST":
         try:
             request_body = json.loads(request.body)
