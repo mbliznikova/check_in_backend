@@ -41,24 +41,9 @@ class ClassModelSerializer(CaseSerializer):
         fields = '__all__'
 
 class ClassOccurrenceSerializer(CaseSerializer):
-    class_id = serializers.IntegerField(source='safe_class_id', read_only=True)
-
     class Meta:
         model = ClassOccurrence
-        fields = [
-            'id',
-            'class_id',
-            'fallback_class_name',
-            'schedule',
-            'planned_date',
-            'actual_date',
-            'planned_start_time',
-            'actual_start_time',
-            'planned_duration',
-            'actual_duration',
-            'is_cancelled',
-            'notes',
-        ]
+        fields = '__all__'
 
 class DaySerializer(CaseSerializer):
     class Meta:
