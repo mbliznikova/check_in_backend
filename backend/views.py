@@ -8,7 +8,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.timezone import now, is_naive, make_aware
-from django.utils.dateparse import parse_datetime, parse_time
+from django.utils.dateparse import parse_datetime, parse_date, parse_time
 from django.core.exceptions import ObjectDoesNotExist
 
 from .models import ClassModel, Student, Day, Schedule, Attendance, Price, Payment, ClassOccurrence
@@ -103,7 +103,77 @@ def classes(request):
 @require_http_methods(["POST"])
 def class_occurrences(request):
     if request.method == "POST":
-        print("Adding new class occurrence")
+        try:
+            request_body = json.loads(request.body)
+
+            class_model_id = request_body.get("classModel")
+            fallback_class_name = request_body.get("fallbackClassName", "")
+            schedule_id = request_body.get("schedule")
+            planned_date_str = request_body.get("plannedDate")
+            planned_start_time_str = request_body.get("plannedStartTime")
+            planned_duration = request_body.get("plannedDuration")
+            notes = request_body.get("notes", "")
+
+            if not planned_date_str or not planned_start_time_str:
+                return make_error_json_response("plannedDate and plannedStartTime are required.", 400)
+
+            planned_date = parse_date(planned_date_str)
+            planned_start_time = parse_time(planned_start_time_str)
+            if not planned_date:
+                return make_error_json_response("Invalid date format", 400)
+            if not planned_start_time:
+                return make_error_json_response("Invalid time format", 400)
+
+            class_model, schedule = None, None
+            if class_model_id:
+                class_model = ClassModel.objects.filter(id=class_model_id).first()
+                if class_model is None:
+                    return make_error_json_response(f"ClassModel {class_model_id} not found.", 404)
+            if schedule_id:
+                schedule = Schedule.objects.filter(id=schedule_id).first()
+                if schedule is None:
+                    return make_error_json_response(f"Schedule {schedule_id} not found.", 404)
+
+            if not fallback_class_name and not class_model:
+                fallback_class_name = "No name class" # TODO: have default as a global/env var
+
+            data_to_write = {
+                "class_model": class_model.id if class_model else None,
+                "fallback_class_name": fallback_class_name or None,
+                "schedule": schedule.id if schedule else None,
+                "planned_date": planned_date,
+                "actual_date": planned_date,
+                "planned_start_time": planned_start_time,
+                "actual_start_time": planned_start_time,
+                "planned_duration": planned_duration or 60, # TODO: have default as a global/env var
+                "actual_duration": planned_duration or 60,
+                "notes": notes,
+            }
+
+            serializer = ClassOccurrenceSerializer(data=data_to_write)
+            if serializer.is_valid():
+                saved_occurrence = serializer.save()
+            else:
+                return make_error_json_response(serializer.errors, 400)
+
+            response = ClassOccurrenceSerializer.dict_to_camel_case({ # TODO: add all fields?
+                "message": "Class was created successfully",
+                "id": saved_occurrence.id,
+                "class_id": saved_occurrence.safe_class_id,
+                "fallback_class_name": saved_occurrence.fallback_class_name,
+                "planned_date": saved_occurrence.planned_date,
+                "planned_start_time": saved_occurrence.planned_start_time,
+                "planned_duration": saved_occurrence.planned_duration,
+                "notes": saved_occurrence.notes,
+            })
+
+            return make_success_json_response(200, response_body=response)
+
+        except json.JSONDecodeError:
+            return make_error_json_response("Invalid JSON", 400)
+        except Exception as e:
+            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+
 
 
 def today_class_occurrences(request):
