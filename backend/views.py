@@ -103,7 +103,11 @@ def classes(request):
 @require_http_methods(["GET", "POST"])
 def class_occurrences(request):
     if request.method == "GET":
-        occurrences = ClassOccurrence.objects.all()
+        class_id = request.GET.get("class_id")
+        if class_id:
+            occurrences = ClassOccurrence.objects.filter(class_model=class_id)
+        else:
+            occurrences = ClassOccurrence.objects.all()
         serializer = ClassOccurrenceSerializer(occurrences, many=True)
 
         response = {
@@ -167,8 +171,8 @@ def class_occurrences(request):
                 return make_error_json_response(serializer.errors, 400)
 
             response = ClassOccurrenceSerializer.dict_to_camel_case({ # TODO: add all fields?
-                "message": "Class was created successfully",
-                "id": saved_occurrence.id,
+                "message": "Class occurrence was created successfully",
+                "occurrence_id": saved_occurrence.id,
                 "class_id": saved_occurrence.safe_class_id,
                 "fallback_class_name": saved_occurrence.fallback_class_name,
                 "planned_date": saved_occurrence.planned_date,
@@ -183,8 +187,6 @@ def class_occurrences(request):
             return make_error_json_response("Invalid JSON", 400)
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
-
-
 
 def today_class_occurrences(request):
     today_day = date.today()
