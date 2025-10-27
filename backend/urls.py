@@ -11,6 +11,7 @@ urlpatterns = [
     path("today_classes_list/", views.today_classes_list, name="today_classes_list"),
     path("today_class_occurrences/", views.today_class_occurrences, name="today_class_occurrences"),
     path("class_occurrences/", views.class_occurrences, name="class_occurrences"),
+    path("class_occurrences/<int:occurrence_id>/delete/", views.delete_occurrence, name="delete_occurrence"),
     path("classes/<int:class_id>/edit/", views.edit_class, name="edit_class"),
     path("classes/<int:class_id>/delete/", views.delete_class, name="delete_class"),
     path("students/", views.students, name="students"),
