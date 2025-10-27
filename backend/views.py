@@ -188,6 +188,33 @@ def class_occurrences(request):
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def delete_occurrence(request, occurrence_id):
+    if request.method == "DELETE":
+        try:
+           occurrence_instance = ClassOccurrence.objects.get(id=occurrence_id)
+           occurrence_instance_id = occurrence_instance.id
+           class_name = occurrence_instance.safe_class_name
+           class_actual_date = occurrence_instance.actual_date
+           class_actual_time = occurrence_instance.actual_start_time
+
+           occurrence_instance.delete()
+
+           response = ClassModelSerializer.dict_to_camel_case(
+                {
+                    "message": f"Occurrence for {class_name} at {class_actual_date} {class_actual_time} was delete successfully",
+                    "occurrence_id": occurrence_instance_id,
+                }
+            )
+
+           return make_success_json_response(200, response_body=response)
+
+        except ClassModel.DoesNotExist:
+            return make_error_json_response("Class not found", 404)
+        except Exception as e:
+            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+
 def today_class_occurrences(request):
     today_day = date.today()
     occurrences = ClassOccurrence.objects.filter(Q(planned_date=today_day) | Q(actual_date=today_day))
