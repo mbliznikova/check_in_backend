@@ -203,7 +203,7 @@ def delete_occurrence(request, occurrence_id):
 
            response = ClassModelSerializer.dict_to_camel_case(
                 {
-                    "message": f"Occurrence for {class_name} at {class_actual_date} {class_actual_time} was delete successfully",
+                    "message": f"Occurrence for {class_name} at {class_actual_date} {class_actual_time} was delete successfully", # TODO: fix typo
                     "occurrence_id": occurrence_instance_id,
                 }
             )
@@ -435,6 +435,37 @@ def available_time_slots(request):
 
     return make_success_json_response(200, response_body=response)
 
+@csrf_exempt
+@require_http_methods(["GET"])
+def available_occurrence_time(request):
+    date_param = request.GET.get("date")
+    duration_minutes_param = request.GET.get("duration")
+
+    if not date_param:
+        return make_error_json_response("Date was not provided", 400)
+    if not duration_minutes_param:
+        return make_error_json_response("Class duration was not provided", 400)
+
+    try:
+        duration_minutes = int(duration_minutes_param)
+        if duration_minutes <= 0:
+            return make_error_json_response("Class duration must be positive", 400)
+    except ValueError:
+        return make_error_json_response("Invalid duration_minutes format", 400)
+
+    occurrences = ClassOccurrence.objects.filter(actual_date=date_param)
+
+    available_slots = calculate_available_occurrence_time_slots(occurrences, duration_minutes)
+
+    response = CaseSerializer.dict_to_camel_case(
+        {
+            "message": "Available time slots for class occurrence",
+            "available_slots": available_slots,
+        }
+    )
+
+    return make_success_json_response(200, response_body=response)
+
 # TODO: have defaults set globally
 def calculate_available_time_slots(schedules, duration_to_fit, step_minutes=30,
                                    day_start="08:00", day_end="21:00"):
@@ -476,6 +507,10 @@ def calculate_available_time_slots(schedules, duration_to_fit, step_minutes=30,
                 candidate_start += step
 
     return available_slots
+
+def calculate_available_occurrence_time_slots(occurrences, duration_to_fit,
+                                              day_start="08:00", day_end="21:00"):
+    pass
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
