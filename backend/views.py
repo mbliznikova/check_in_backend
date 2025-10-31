@@ -446,6 +446,10 @@ def available_occurrence_time(request):
     if not duration_minutes_param:
         return make_error_json_response("Class duration was not provided", 400)
 
+    parsed_date = parse_date(date_param)
+    if not parsed_date:
+        return make_error_json_response("Invalid date format", 400)
+
     try:
         duration_minutes = int(duration_minutes_param)
         if duration_minutes <= 0:
@@ -453,14 +457,14 @@ def available_occurrence_time(request):
     except ValueError:
         return make_error_json_response("Invalid duration_minutes format", 400)
 
-    occurrences = ClassOccurrence.objects.filter(actual_date=date_param)
+    occurrences = ClassOccurrence.objects.filter(actual_date=parsed_date)
 
-    available_slots = calculate_available_occurrence_time_slots(occurrences, duration_minutes)
+    available_slots = calculate_available_occurrence_time_intervals(occurrences, duration_minutes, parsed_date)
 
     response = CaseSerializer.dict_to_camel_case(
         {
-            "message": "Available time slots for class occurrence",
-            "available_slots": available_slots,
+            "message": "Available time intervals for class occurrence",
+            "available_intervals": available_slots,
         }
     )
 
@@ -508,9 +512,48 @@ def calculate_available_time_slots(schedules, duration_to_fit, step_minutes=30,
 
     return available_slots
 
-def calculate_available_occurrence_time_slots(occurrences, duration_to_fit,
-                                              day_start="08:00", day_end="21:00"):
-    pass
+def calculate_available_occurrence_time_intervals(occurrences, duration_to_fit, base_date,
+                                                  day_start="08:00", day_end="21:00"):
+    # Here I want to get time intervals at where a class can start, not time slots. I.e. if available time
+    # from 8:30 to 12:00 and duration is 60 min, the interval is 8:30-11:00.
+
+    available_intervals, taken_intervals = [], []
+
+    dummy_day_start_class = datetime.combine(base_date, datetime.strptime(day_start, "%H:%M").time())
+    dummy_day_end_class = datetime.combine(base_date, datetime.strptime(day_end, "%H:%M").time())
+    taken_intervals.append({"start_time": dummy_day_start_class, "end_time": dummy_day_start_class})
+
+    for occurrence in occurrences:
+        start_time = datetime.combine(base_date, occurrence.actual_start_time)
+        class_duration = occurrence.actual_duration
+        end_time = start_time + timedelta(minutes=class_duration)
+        taken_intervals.append({"start_time": start_time, "end_time": end_time})
+
+        last_occurrence_start = datetime.combine(base_date, occurrence.actual_start_time)
+        dummy_day_end_class = last_occurrence_start if last_occurrence_start > dummy_day_end_class else dummy_day_end_class
+
+    taken_intervals.append({"start_time": dummy_day_end_class, "end_time": dummy_day_end_class})
+
+    len_taken_intervals = len(taken_intervals)
+
+    taken_intervals = sorted(taken_intervals, key=lambda x: x["start_time"])
+
+    for i in range(len_taken_intervals - 1):
+        window_start = taken_intervals[i]["end_time"]
+        window_end = taken_intervals[i + 1]["start_time"]
+
+        time_interval = window_end - window_start
+        interval_minutes = int(time_interval.total_seconds() // 60)
+
+        if interval_minutes < duration_to_fit:
+            continue
+        else:
+            duration = timedelta(minutes=duration_to_fit)
+            available_intervals.append([window_start.time().strftime("%H:%M"), (window_end - duration).time().strftime("%H:%M")])
+
+        # TODO: write tests
+
+    return available_intervals
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
