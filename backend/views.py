@@ -189,6 +189,77 @@ def class_occurrences(request):
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
 @csrf_exempt
+@require_http_methods(["PATCH"])
+def edit_occurrence(request, occurrence_id):
+    if request.method == "PATCH":
+        try:
+            occurrence_instance = ClassOccurrence.objects.get(id=occurrence_id)
+
+            request_body = json.loads(request.body)
+            actual_date_str = request_body.get("actualDate")
+            actual_start_time_str = request_body.get("actualStartTime")
+            actual_duration_str = request_body.get("actualDuration")
+            is_cancelled = request_body.get("isCancelled")
+            notes = request_body.get("notes")
+
+            # TODO: add tests
+
+            # Assume that only updated value have been sent, so not checking if they differ from the planned_ fields
+            data_to_write = {}
+
+            if actual_date_str is not None:
+                actual_date = parse_date(actual_date_str)
+                if not actual_date:
+                    return make_error_json_response(f"Invalid date format: {actual_date_str}", 400)
+
+                data_to_write["actual_date"] = actual_date
+                print(f"Parsed date {actual_date}")
+
+            if actual_start_time_str is not None:
+                actual_start_time = parse_time(actual_start_time_str)
+                if not actual_start_time:
+                    return make_error_json_response(f"Invalid time format: {actual_start_time_str}", 400)
+
+                data_to_write["actual_start_time"] = actual_start_time
+                print(f"Parsed time {actual_start_time}")
+
+            if actual_duration_str is not None:
+                try:
+                    actual_duration = int(actual_duration_str)
+                except ValueError as e:
+                    return make_error_json_response(f"Invalid minutes value: {actual_duration_str}. Can not convert to int: {e}", 400)
+
+                data_to_write["actual_duration"] = actual_duration
+
+            if is_cancelled is not None:
+                data_to_write["is_cancelled"] = is_cancelled
+
+            if notes is not None:
+                data_to_write["notes"] = notes
+
+            serializer = ClassOccurrenceSerializer(occurrence_instance, data=data_to_write, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+            else:
+                return make_error_json_response(serializer.errors, 400)
+
+            response = ClassModelSerializer.dict_to_camel_case({
+                "message": "Class Occurrence was updated successfully",
+                "id": occurrence_id,
+                **data_to_write,
+            })
+
+            return make_success_json_response(200, response_body=response)
+
+        except ClassOccurrence.DoesNotExist:
+            return make_error_json_response("Class occurrence not found", 404)
+        except json.JSONDecodeError:
+            return make_error_json_response("Invalid JSON", 400)
+        except Exception as e:
+            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+
+
+@csrf_exempt
 @require_http_methods(["DELETE"])
 def delete_occurrence(request, occurrence_id):
     if request.method == "DELETE":
