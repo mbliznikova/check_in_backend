@@ -213,7 +213,6 @@ def edit_occurrence(request, occurrence_id):
                     return make_error_json_response(f"Invalid date format: {actual_date_str}", 400)
 
                 data_to_write["actual_date"] = actual_date
-                print(f"Parsed date {actual_date}")
 
             if actual_start_time_str is not None:
                 actual_start_time = parse_time(actual_start_time_str)
@@ -221,7 +220,6 @@ def edit_occurrence(request, occurrence_id):
                     return make_error_json_response(f"Invalid time format: {actual_start_time_str}", 400)
 
                 data_to_write["actual_start_time"] = actual_start_time
-                print(f"Parsed time {actual_start_time}")
 
             if actual_duration_str is not None:
                 try:
