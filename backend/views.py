@@ -281,8 +281,8 @@ def delete_occurrence(request, occurrence_id):
 
            return make_success_json_response(200, response_body=response)
 
-        except ClassModel.DoesNotExist:
-            return make_error_json_response("Class not found", 404)
+        except ClassOccurrence.DoesNotExist:
+            return make_error_json_response("Class Occurrence not found", 404)
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
