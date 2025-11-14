@@ -41,7 +41,7 @@ class Schedule(models.Model):
 
 class ClassOccurrence(models.Model):
     id = models.AutoField(primary_key=True)
-    class_model = models.ForeignKey(ClassModel, on_delete=models.SET_NULL, null=True, blank=True)
+    class_model = models.ForeignKey(ClassModel, on_delete=models.SET_NULL, null=True, blank=True) # TODO: rename to class_id?
     fallback_class_name = models.CharField(max_length=100, blank=True)
     schedule = models.ForeignKey(Schedule, on_delete=models.SET_NULL, null=True, blank=True)
     planned_date = models.DateField()
@@ -165,6 +165,9 @@ class Price(models.Model):
     id = models.AutoField(primary_key=True)
     class_id = models.ForeignKey(ClassModel, on_delete=models.CASCADE)
     amount = models.FloatField()
+
+    class Meta:
+        unique_together = ("class_id",)
 
 class MonthlyPaymentsSummary(models.Model):
     id = models.AutoField(primary_key=True)

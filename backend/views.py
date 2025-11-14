@@ -12,7 +12,8 @@ from django.utils.dateparse import parse_datetime, parse_date, parse_time
 from django.core.exceptions import ObjectDoesNotExist
 
 from .models import ClassModel, Student, Day, Schedule, Attendance, Price, Payment, ClassOccurrence
-from .serializers import CaseSerializer, StudentSerializer, ClassModelSerializer, AttendanceSerializer, PaymentSerializer, MonthlyPaymentsSummary, ScheduleSerializer, ClassOccurrenceSerializer
+from .serializers import CaseSerializer, StudentSerializer, ClassModelSerializer, AttendanceSerializer,\
+    PaymentSerializer, MonthlyPaymentsSummary, ScheduleSerializer, ClassOccurrenceSerializer, PriceSerializer
 
 # TODO: have parameters more consistent, i.e. have status code at the same order
 def make_error_json_response(error_message, status_code):
@@ -986,18 +987,61 @@ def attendance_list(request):
 
     return make_success_json_response(200, response_body=response)
 
-def prices_list(request):
-    prices = Price.objects.all()
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def prices(request):
+    if request.method == "GET":
+        prices = Price.objects.all()
 
-    price_dict = {}
-    for price in prices:
-        price_dict[str(price.class_id.id)] = {price.class_id.name: price.amount}
+        price_dict = {}
+        for price in prices:
+            price_dict[str(price.class_id.id)] = {price.class_id.name: price.amount}
 
-    response = {
-        "response": price_dict
-    }
+        response = {
+            "response": price_dict
+        }
 
-    return make_success_json_response(200, response_body=response)
+        return make_success_json_response(200, response_body=response)
+
+    if request.method == "POST":
+        try:
+            request_body = json.loads(request.body)
+            class_id = request_body.get("classId")
+            amount = request_body.get("amount")
+
+            if not class_id or not amount:
+                return make_error_json_response("Missing required fields", 400)
+
+            try:
+                class_instance = ClassModel.objects.get(id=class_id)
+            except ObjectDoesNotExist:
+                return make_error_json_response(f"Class {class_id} does not exist", 400)
+
+            if Price.objects.filter(class_id=class_instance).exists():
+                return make_error_json_response(f"Price already exists for class {class_id}", 400)
+
+            data_to_write = {
+                "class_id": class_instance.pk,
+                "amount": amount
+            }
+
+            serializer = PriceSerializer(data=data_to_write)
+            if serializer.is_valid():
+                saved_price = serializer.save()
+            else:
+                return make_error_json_response(serializer.errors, 400)
+
+            response = PriceSerializer.dict_to_camel_case({
+                "message": "Price was created successfully",
+                "price_id": saved_price.id,
+                "class_id": saved_price.class_id_id,
+                "amount": amount,
+            })
+
+            return make_success_json_response(200, response_body=response)
+
+        except json.JSONDecodeError:
+            return make_error_json_response("Invalid JSON", 400)
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
