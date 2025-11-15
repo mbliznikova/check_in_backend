@@ -30,6 +30,16 @@ class CaseSerializer(serializers.ModelSerializer):
     def camel_to_snake(camel_str):
         return re.sub(r'(?<!^)(?=[A-Z])', '_', camel_str).lower()
     
+    @staticmethod
+    def camelize_selected_keys(d: dict, keys: list[str]):
+        result = {}
+        for key, value in d.items():
+            if key in keys:
+                result[CaseSerializer.snake_to_camel(key)] = value
+            else:
+                result[key] = value
+        return result
+
 class StudentSerializer(CaseSerializer):
     class Meta:
         model = Student

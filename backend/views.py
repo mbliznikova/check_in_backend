@@ -994,8 +994,14 @@ def prices(request):
         prices = Price.objects.all()
 
         price_dict = {}
+
         for price in prices:
-            price_dict[str(price.class_id.id)] = {price.class_id.name: price.amount}
+            inner = {
+                price.class_id.name: price.amount,
+                "price_id": price.id,
+            }
+            inner = PriceSerializer.camelize_selected_keys(inner, ["price_id"])
+            price_dict[str(price.class_id.id)] = inner
 
         response = {
             "response": price_dict
