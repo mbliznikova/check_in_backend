@@ -997,14 +997,17 @@ def prices(request):
 
         for price in prices:
             inner = {
-                price.class_id.name: price.amount,
+                "class_name": price.class_id.name,
+                "amount": price.amount,
                 "price_id": price.id,
             }
-            inner = PriceSerializer.camelize_selected_keys(inner, ["price_id"])
+            inner = PriceSerializer.dict_to_camel_case(inner)
             price_dict[str(price.class_id.id)] = inner
 
+        result = PriceSerializer.dict_to_camel_case(price_dict)
+
         response = {
-            "response": price_dict
+            "response": result
         }
 
         return make_success_json_response(200, response_body=response)
