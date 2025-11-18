@@ -1053,6 +1053,38 @@ def prices(request):
             return make_error_json_response("Invalid JSON", 400)
 
 @csrf_exempt
+@require_http_methods(["PATCH"])
+def edit_price(request, price_id):
+    if request.method == "PATCH":
+        try:
+            price = Price.objects.get(id=price_id)
+
+            request_body = json.loads(request.body)
+            amount = request_body.get("amount")
+
+            data_to_write = {}
+
+            if amount is not None: # TODO: validate amount
+                data_to_write["amount"] = amount
+
+            serializer = PriceSerializer(price, data=data_to_write, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+            else:
+                return make_error_json_response(serializer.errors, 400)
+
+            response = PriceSerializer.dict_to_camel_case({
+                "message": "Price was updated successfully",
+                "id": price.id,
+                **data_to_write,
+            })
+
+            return make_success_json_response(200, response_body=response)
+
+        except Price.DoesNotExist:
+            return make_error_json_response("Price not found", 404)
+
+@csrf_exempt
 @require_http_methods(["GET", "POST"])
 def payments(request):
     if request.method == "GET":

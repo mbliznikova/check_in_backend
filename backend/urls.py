@@ -20,6 +20,7 @@ urlpatterns = [
     path("students/<int:student_id>/delete/", views.delete_student, name="delete_student"),
     path("attended_sudents/", views.get_attended_students, name="attended_sudents"),
     path("prices/", views.prices, name="prices"),
+    path("prices/<int:price_id>/", views.edit_price, name="edit_price"),
     path("payments/", views.payments, name="payments"),
     path("payment_summary/", views.payment_summary, name="payment_summary"),
     path("schedules/", views.schedules, name="schedules"),
