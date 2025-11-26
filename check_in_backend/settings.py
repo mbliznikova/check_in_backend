@@ -28,6 +28,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["192.168.1.230", "192.168.16.53"]
 
+AUTH_USER_MODEL = "backend.User"
 
 # Application definition
 
