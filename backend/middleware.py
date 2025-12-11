@@ -1,35 +1,65 @@
+import os
+import jwt
+import traceback
+
+from dotenv import load_dotenv
+from functools import wraps
+from jwt import PyJWKClient
+
+from django.http import JsonResponse
 from django.utils.functional import SimpleLazyObject
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from django.conf import settings
 
 from clerk_backend_api import Clerk
 from clerk_backend_api.models.sdkerror import SDKError
 
+load_dotenv()
+
+CLERK_SECRET_KEY = os.environ.get("CLERK_SECRET_KEY")
+CLERK_JWKS_URL = os.environ.get("CLERK_JWKS_URL")
+CLERK_ISSUER = os.environ.get("CLERK_ISSUER")
+CLERK_AUDIENCE = os.environ.get("CLERK_AUDIENCE")
+
+jwks_client = PyJWKClient(CLERK_JWKS_URL)
+clerk_client = Clerk(CLERK_SECRET_KEY)
+
 User = get_user_model()
 
-clerk_client = Clerk(settings.CLERK_SECRET_KEY)
+def clerk_login_required(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user or request.user.is_anonymous:
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+        return view_func(request, *args, **kwargs)
+    return wrapper
 
 def get_clerk_user(request):
     auth_header = request.headers.get("Authorization")
 
     if not auth_header or not auth_header.startswith("Bearer "):
         return AnonymousUser()
-    
+
     token = auth_header.split(" ")[1]
 
     try:
-        session = clerk_client.sessions.verify(token)
-        clerk_user_id = session.user_id
+        signing_key = jwks_client.get_signing_key_from_jwt(token).key
 
-        # Try to find existing local user
+        decoded = jwt.decode(
+            token,
+            signing_key,
+            algorithms=["RS256"],
+            audience=CLERK_AUDIENCE,
+            issuer=CLERK_ISSUER,
+            options={"verify_aud": True},
+        )
+
+        clerk_user_id = decoded["sub"]
+
         try:
             user = User.objects.get(clerk_user_id=clerk_user_id)
         except User.DoesNotExist:
-            # Create user if not found (sync from Clerk)
-            clerk_user = clerk_client.users.get(clerk_user_id)
-
-            email = clerk_user.email_addresses[0].email_address
+            email = decoded.get("email")
 
             user = User.objects.create(
                 username=email,
@@ -40,9 +70,9 @@ def get_clerk_user(request):
 
         return user
 
-    except SDKError:
-        return AnonymousUser()
-    except Exception:
+    except Exception as e:
+        print("JWT VERIFICATION ERROR:", type(e), str(e))
+        traceback.print_exc()
         return AnonymousUser()
 
 class ClerkAuthenticationMiddleware:
