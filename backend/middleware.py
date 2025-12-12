@@ -1,28 +1,17 @@
 import os
 import jwt
-import traceback
+import logging
 
-from dotenv import load_dotenv
 from functools import wraps
-from jwt import PyJWKClient
 
 from django.http import JsonResponse
 from django.utils.functional import SimpleLazyObject
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 
-from clerk_backend_api import Clerk
-from clerk_backend_api.models.sdkerror import SDKError
+from .services import user_sync, verify_token
 
-load_dotenv()
-
-CLERK_SECRET_KEY = os.environ.get("CLERK_SECRET_KEY")
-CLERK_JWKS_URL = os.environ.get("CLERK_JWKS_URL")
-CLERK_ISSUER = os.environ.get("CLERK_ISSUER")
-CLERK_AUDIENCE = os.environ.get("CLERK_AUDIENCE")
-
-jwks_client = PyJWKClient(CLERK_JWKS_URL)
-clerk_client = Clerk(CLERK_SECRET_KEY)
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -43,42 +32,38 @@ def get_clerk_user(request):
     token = auth_header.split(" ")[1]
 
     try:
-        signing_key = jwks_client.get_signing_key_from_jwt(token).key
+        decoded = verify_token.verify_clerk_token(token)
 
-        decoded = jwt.decode(
-            token,
-            signing_key,
-            algorithms=["RS256"],
-            audience=CLERK_AUDIENCE,
-            issuer=CLERK_ISSUER,
-            options={"verify_aud": True},
-        )
+        if not decoded:
+            return AnonymousUser()
 
-        clerk_user_id = decoded["sub"]
+        clerk_user_id = decoded.get("sub")
+        email = decoded.get("email")
+        extra_fields = {
+            "first_name": decoded.get("first_name"),
+            "last_name": decoded.get("last_name"),
+        }
 
-        try:
-            user = User.objects.get(clerk_user_id=clerk_user_id)
-        except User.DoesNotExist:
-            email = decoded.get("email")
-
-            user = User.objects.create(
-                username=email,
-                email=email,
-                clerk_user_id=clerk_user_id,
-                role="teacher",
-            )
+        user = user_sync.sync_clerk_user(clerk_user_id, email, extra_fields)
 
         return user
 
+    except jwt.ExpiredSignatureError as e:
+        logger.warning(f"Expired Signature Error: {e}")
+        return AnonymousUser()
+
+    except jwt.InvalidTokenError as e:
+        logger.warning(f"Invalid token: {e}")
+        return AnonymousUser()
+
     except Exception as e:
-        print("JWT VERIFICATION ERROR:", type(e), str(e))
-        traceback.print_exc()
+        logger.exception(f"Unexpected Clerk auth error: {e}")
         return AnonymousUser()
 
 class ClerkAuthenticationMiddleware:
     """
     - Reads Clerk session token from Authorization header
-    - Validates token using clerk-sdk-python
+    - Validates token using verify_token service (jwt)
     - Syncs Clerk user -> Django user model
     - Attaches request.user
     """
