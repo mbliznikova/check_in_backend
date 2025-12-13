@@ -2,6 +2,7 @@ import json
 
 from datetime import date, datetime, timedelta
 
+from .middleware import clerk_login_required
 from django.db.models import Q, Sum
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
@@ -45,6 +46,7 @@ def today_classes_list(request):
 
     return JsonResponse(response)
 
+@clerk_login_required
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def classes(request):
@@ -100,6 +102,7 @@ def classes(request):
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
+@clerk_login_required
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def class_occurrences(request):
@@ -189,6 +192,7 @@ def class_occurrences(request):
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
+@clerk_login_required
 @csrf_exempt
 @require_http_methods(["PATCH"])
 def edit_occurrence(request, occurrence_id):
@@ -258,6 +262,7 @@ def edit_occurrence(request, occurrence_id):
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
 
+@clerk_login_required
 @csrf_exempt
 @require_http_methods(["DELETE"])
 def delete_occurrence(request, occurrence_id):
@@ -297,6 +302,7 @@ def today_class_occurrences(request):
 
     return make_success_json_response(200, response_body=response)
 
+@clerk_login_required
 @csrf_exempt
 @require_http_methods(["PUT"])
 def edit_class(request, class_id):
@@ -343,6 +349,7 @@ def edit_class(request, class_id):
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
+@clerk_login_required
 @csrf_exempt
 @require_http_methods(["DELETE"])
 def delete_class(request, class_id):
@@ -369,6 +376,7 @@ def delete_class(request, class_id):
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
+@clerk_login_required
 @csrf_exempt
 @require_http_methods(["DELETE"])
 def delete_schedule(request, schedule_id):
@@ -393,6 +401,7 @@ def delete_schedule(request, schedule_id):
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
+@clerk_login_required
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def schedules(request):
@@ -469,6 +478,7 @@ def schedules(request):
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
+@clerk_login_required
 @csrf_exempt
 @require_http_methods(["GET"])
 def available_time_slots(request):
@@ -505,6 +515,7 @@ def available_time_slots(request):
 
     return make_success_json_response(200, response_body=response)
 
+@clerk_login_required
 @csrf_exempt
 @require_http_methods(["GET"])
 def available_occurrence_time(request):
@@ -625,6 +636,7 @@ def calculate_available_occurrence_time_intervals(occurrences, duration_to_fit, 
 
     return available_intervals
 
+@clerk_login_required
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def students(request):
@@ -684,6 +696,7 @@ def students(request):
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
+@clerk_login_required
 @csrf_exempt
 @require_http_methods(["PUT"])
 def edit_student(request, student_id):
@@ -737,6 +750,7 @@ def edit_student(request, student_id):
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
+@clerk_login_required
 @csrf_exempt
 @require_http_methods(["DELETE"])
 def delete_student(request, student_id):
@@ -761,6 +775,7 @@ def delete_student(request, student_id):
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
+@clerk_login_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def check_in(request):
@@ -821,6 +836,7 @@ def check_in(request):
     except Exception as e:
         return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
+@clerk_login_required
 def get_attended_students(request):
     attended_today = Attendance.objects.filter(attendance_date=now().date())
     student_occurrence_ids = attended_today.values_list("student_id", "class_occurrence", "class_name")
@@ -849,6 +865,7 @@ def get_attended_students(request):
 
     return make_success_json_response(200, response_body=response)
 
+@clerk_login_required
 @csrf_exempt
 @require_http_methods(["PUT"])
 def confirm(request):
@@ -911,6 +928,7 @@ def confirm(request):
     except Exception as e:
         return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
+@clerk_login_required
 def attendance_list(request):
     request_month = request.GET.get("month")
     request_year = request.GET.get("year")
@@ -987,6 +1005,7 @@ def attendance_list(request):
 
     return make_success_json_response(200, response_body=response)
 
+@clerk_login_required
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def prices(request):
@@ -1052,6 +1071,7 @@ def prices(request):
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
 
+@clerk_login_required
 @csrf_exempt
 @require_http_methods(["PATCH"])
 def edit_price(request, price_id):
@@ -1084,6 +1104,7 @@ def edit_price(request, price_id):
         except Price.DoesNotExist:
             return make_error_json_response("Price not found", 404)
 
+@clerk_login_required
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def payments(request):
@@ -1191,6 +1212,7 @@ def payments(request):
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
 
+@clerk_login_required
 def payment_summary(request):
     # By default returns for the current month (for now)
     # Should I calculate it from payments? Every time or by a separate request only?
