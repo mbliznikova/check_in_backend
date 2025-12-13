@@ -2,15 +2,46 @@ import json
 
 from datetime import datetime, time
 
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
 from django.utils.dateparse import parse_time
 from django.utils.timezone import now
 
-from .models import ClassModel, Student, Attendance, Payment, Day, Schedule
+from unittest.mock import patch
 
+from backend.services.user_sync import sync_clerk_user
+
+User = get_user_model()
+
+from ..models import ClassModel, Student, Attendance, Payment, Day, Schedule
+
+FAKE_CLERK_PAYLOAD = {
+    "sub": "clerk_test_user_123",
+    "email": "test@example.com",
+    "first_name": "Test",
+    "last_name": "User",
+}
+
+# TODO: update accordingly to changes in the models (Class Occurrence introduction)
 class CheckInTestCase(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.verify_patch = patch(
+            "backend.middleware.verify_token.verify_clerk_token",
+            return_value=FAKE_CLERK_PAYLOAD,
+        )
+        cls.verify_patch.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.verify_patch.stop()
+        super().tearDownClass()
+
     def positive_response_helper(self, response, expected_status, message):
         self.assertEqual(response.status_code, expected_status)
         response_data = json.loads(response.content)
@@ -34,6 +65,8 @@ class CheckInTestCase(TestCase):
             self.assertEqual(set(response_data.get("checkedOut")), set(expected_checked_out_list))
 
     def setUp(self):
+        self.client.defaults["HTTP_AUTHORIZATION"] = "Bearer test-token"
+
         self.test_student = Student.objects.create(first_name="John", last_name="Testovich")
         self.class_one = ClassModel.objects.create(name="Foil")
         self.class_two = ClassModel.objects.create(name="Heavy sabre")
@@ -139,213 +172,246 @@ class CheckInTestCase(TestCase):
         self.assertIn("error", response_data)
         self.assertEqual(response_data.get("error"), "Invalid JSON")
 
+# TODO: update accordingly to changes in the models (Class Occurrence introduction)
 class ConfirmTestCase(TestCase):
-        # TODO: have a common positive_response_helper for each class?
-        def positive_response_helper(self, response, expected_status, message):
-            self.assertEqual(response.status_code, expected_status)
-            response_data = json.loads(response.content)
-            self.assertIn("message", response_data)
-            self.assertEqual(response_data.get("message"), message)
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
 
-        def setUp(self):
-            self.test_student = Student.objects.create(first_name="John", last_name="Testovich")
-            self.class_one = ClassModel.objects.create(name="Rapier and dagger")
-            self.class_two = ClassModel.objects.create(name="Self-defence")
-            self.class_three = ClassModel.objects.create(name="Longsword")
+        cls.verify_patch = patch(
+            "backend.middleware.verify_token.verify_clerk_token",
+            return_value=FAKE_CLERK_PAYLOAD,
+        )
+        cls.verify_patch.start()
 
-            self.today = now().date().isoformat()
-            self.another_date = datetime(2025, 5, 13).date()
+    @classmethod
+    def tearDownClass(cls):
+        cls.verify_patch.stop()
+        super().tearDownClass()
 
-            self.attendance_one = Attendance.objects.create(student_id=self.test_student, class_id=self.class_one, attendance_date=self.today)
-            self.attendance_two = Attendance.objects.create(student_id=self.test_student, class_id=self.class_two, attendance_date=self.today)
-            self.attendance_three = Attendance.objects.create(student_id=self.test_student, class_id=self.class_three, attendance_date=self.another_date)
+    # TODO: have a common positive_response_helper for each class?
+    def positive_response_helper(self, response, expected_status, message):
+        self.assertEqual(response.status_code, expected_status)
+        response_data = json.loads(response.content)
+        self.assertIn("message", response_data)
+        self.assertEqual(response_data.get("message"), message)
 
-            self.confirm_url = reverse("confirm")
+    def setUp(self):
+        self.client.defaults["HTTP_AUTHORIZATION"] = "Bearer test-token"
 
-        def test_student_checked_not_today_datetime(self):
-            request_data = {
-                "confirmationList": [
-                        {self.test_student.id: {
-                            self.class_three.id: True
-                        }}
-                    ],
-                "date": "2025-05-13",
-            }
+        self.test_student = Student.objects.create(first_name="John", last_name="Testovich")
+        self.class_one = ClassModel.objects.create(name="Rapier and dagger")
+        self.class_two = ClassModel.objects.create(name="Self-defence")
+        self.class_three = ClassModel.objects.create(name="Longsword")
 
-            response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
-            self.positive_response_helper(response, 200, "Attendance confirmed successfully")
+        self.today = now().date().isoformat()
+        self.another_date = datetime(2025, 5, 13).date()
 
-            attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.another_date)
-            self.assertEqual(len(attendance_records), 1)
-            self.assertIn(self.attendance_three, attendance_records)
-            self.assertEqual(attendance_records[0].attendance_date, self.another_date)
+        self.attendance_one = Attendance.objects.create(student_id=self.test_student, class_id=self.class_one, attendance_date=self.today)
+        self.attendance_two = Attendance.objects.create(student_id=self.test_student, class_id=self.class_two, attendance_date=self.today)
+        self.attendance_three = Attendance.objects.create(student_id=self.test_student, class_id=self.class_three, attendance_date=self.another_date)
 
-        def test_student_checked_no_datetime_provided(self):
-            request_data = {
-                "confirmationList": [
-                        {self.test_student.id: {
-                            self.class_one.id: True
-                        }}
-                    ],
-            }
+        self.confirm_url = reverse("confirm")
 
-            response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
-            self.positive_response_helper(response, 200, "Attendance confirmed successfully")
+    def test_student_checked_not_today_datetime(self):
+        request_data = {
+            "confirmationList": [
+                    {self.test_student.id: {
+                        self.class_three.id: True
+                    }}
+                ],
+            "date": "2025-05-13",
+        }
 
-            attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
-            self.assertEqual(len(attendance_records), 1)
-            self.assertIn(self.attendance_one, attendance_records)
-            self.assertEqual(attendance_records[0].attendance_date.isoformat(), self.today)
+        response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
+        self.positive_response_helper(response, 200, "Attendance confirmed successfully")
 
-        def test_student_checked_confirmed(self):
-            request_data = {
-                "confirmationList": [
-                        {self.test_student.id: {
-                            self.class_one.id: True,
-                            self.class_two.id: True
-                        }}
-                    ]
-            }
+        attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.another_date)
+        self.assertEqual(len(attendance_records), 1)
+        self.assertIn(self.attendance_three, attendance_records)
+        self.assertEqual(attendance_records[0].attendance_date, self.another_date)
 
-            response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
-            self.positive_response_helper(response, 200, "Attendance confirmed successfully")
+    def test_student_checked_no_datetime_provided(self):
+        request_data = {
+            "confirmationList": [
+                    {self.test_student.id: {
+                        self.class_one.id: True
+                    }}
+                ],
+        }
 
-            attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
-            self.assertEqual(len(attendance_records), 2)
-            self.assertIn(self.attendance_one, attendance_records)
-            self.assertIn(self.attendance_two, attendance_records)
-            for record in attendance_records:
+        response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
+        self.positive_response_helper(response, 200, "Attendance confirmed successfully")
+
+        attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
+        self.assertEqual(len(attendance_records), 1)
+        self.assertIn(self.attendance_one, attendance_records)
+        self.assertEqual(attendance_records[0].attendance_date.isoformat(), self.today)
+
+    def test_student_checked_confirmed(self):
+        request_data = {
+            "confirmationList": [
+                    {self.test_student.id: {
+                        self.class_one.id: True,
+                        self.class_two.id: True
+                    }}
+                ]
+        }
+
+        response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
+        self.positive_response_helper(response, 200, "Attendance confirmed successfully")
+
+        attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
+        self.assertEqual(len(attendance_records), 2)
+        self.assertIn(self.attendance_one, attendance_records)
+        self.assertIn(self.attendance_two, attendance_records)
+        for record in attendance_records:
+            self.assertEqual(record.is_showed_up, True)
+
+    def test_student_unchecked_24_hrs_policy(self):
+        request_data = {
+            "confirmationList": [
+                    {self.test_student.id: {
+                        self.class_one.id: False,
+                        self.class_two.id: False
+                    }}
+                ]
+        }
+
+        response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
+        self.positive_response_helper(response, 200, "Attendance confirmed successfully")
+
+        attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
+        self.assertEqual(len(attendance_records), 2)
+        self.assertIn(self.attendance_one, attendance_records)
+        self.assertIn(self.attendance_two, attendance_records)
+        for record in attendance_records:
+            self.assertEqual(record.is_showed_up, False)
+
+    def test_student_unchecked_no_24_hrs_policy(self):
+        request_data = {
+            "confirmationList": [
+                    {self.test_student.id: {}}
+                ]
+        }
+
+        response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
+        self.positive_response_helper(response, 200, "Attendance confirmed successfully")
+
+        attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
+        self.assertEqual(len(attendance_records), 0)
+
+    def test_student_checked_one_class_no_24_hrs_policy_and_unchecked_another_24_hrs_policy(self):
+        request_data = {
+            "confirmationList": [
+                    {self.test_student.id: {
+                        self.class_one.id: True,
+                        self.class_two.id: False
+                    }}
+                ]
+        }
+
+        response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
+        self.positive_response_helper(response, 200, "Attendance confirmed successfully")
+
+        attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
+        self.assertEqual(len(attendance_records), 2)
+        self.assertIn(self.attendance_one, attendance_records)
+        self.assertIn(self.attendance_two, attendance_records)
+        for record in attendance_records:
+            if record.class_id == self.class_one.id:
                 self.assertEqual(record.is_showed_up, True)
-
-        def test_student_unchecked_24_hrs_policy(self):
-            request_data = {
-                "confirmationList": [
-                        {self.test_student.id: {
-                            self.class_one.id: False,
-                            self.class_two.id: False
-                        }}
-                    ]
-            }
-
-            response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
-            self.positive_response_helper(response, 200, "Attendance confirmed successfully")
-
-            attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
-            self.assertEqual(len(attendance_records), 2)
-            self.assertIn(self.attendance_one, attendance_records)
-            self.assertIn(self.attendance_two, attendance_records)
-            for record in attendance_records:
+            if record.class_id == self.class_two.id:
                 self.assertEqual(record.is_showed_up, False)
 
-        def test_student_unchecked_no_24_hrs_policy(self):
-            request_data = {
-                "confirmationList": [
-                        {self.test_student.id: {}}
-                    ]
-            }
-
-            response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
-            self.positive_response_helper(response, 200, "Attendance confirmed successfully")
-
-            attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
-            self.assertEqual(len(attendance_records), 0)
-
-        def test_student_checked_one_class_no_24_hrs_policy_and_unchecked_another_24_hrs_policy(self):
-            request_data = {
-                "confirmationList": [
-                        {self.test_student.id: {
-                            self.class_one.id: True,
-                            self.class_two.id: False
-                        }}
-                    ]
-            }
-
-            response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
-            self.positive_response_helper(response, 200, "Attendance confirmed successfully")
-
-            attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
-            self.assertEqual(len(attendance_records), 2)
-            self.assertIn(self.attendance_one, attendance_records)
-            self.assertIn(self.attendance_two, attendance_records)
-            for record in attendance_records:
-                if record.class_id == self.class_one.id:
-                    self.assertEqual(record.is_showed_up, True)
-                if record.class_id == self.class_two.id:
-                    self.assertEqual(record.is_showed_up, False)
-
-        def test_student_unchecked_one_class_no_24_hrs_policy_and_unchecked_another_24_hrs_policy(self):
-            request_data = {
-                "confirmationList": [
-                        {self.test_student.id: {
-                            self.class_two.id: False
-                        }}
-                    ]
-            }
-
-            response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
-            self.positive_response_helper(response, 200, "Attendance confirmed successfully")
-
-            attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
-            self.assertEqual(len(attendance_records), 1)
-            self.assertIn(self.attendance_two, attendance_records)
-            self.assertEqual(attendance_records[0].class_id.id, self.class_two.id)
-            self.assertEqual(attendance_records[0].is_showed_up, False)
-
-        def test_student_checked_one_class_and_unchecked_another_no_24_hrs_policy(self):
-            request_data = {
-                "confirmationList": [
-                        {self.test_student.id: {
-                            self.class_one.id: True,
-                        }}
-                    ]
-            }
-
-            response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
-            self.positive_response_helper(response, 200, "Attendance confirmed successfully")
-
-            attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
-            self.assertEqual(len(attendance_records), 1)
-            self.assertIn(self.attendance_one, attendance_records)
-            self.assertEqual(attendance_records[0].class_id.id, self.class_one.id)
-
-        def test_invalid_json(self):
-            response = self.client.put(self.confirm_url, data="invalid JSON", content_type="application/json")
-            self.assertEqual(response.status_code, 400)
-
-            response_data = json.loads(response.content)
-            self.assertIn("error", response_data)
-            self.assertEqual(response_data.get("error"), "Invalid JSON")
-
-        def test_invalid_data_format_confirmation_list_is_no_list(self):
-            request_data = {
-                "confirmationList": {}
-            }
-
-            response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
-            self.assertEqual(response.status_code, 400)
-
-            response_data = json.loads(response.content)
-            self.assertIn("error", response_data)
-            self.assertEqual(response_data.get("error"), "Invalid data format: 'confirmationList' should be a list")
-
-        def test_invalid_data_format_no_dicts_in_confirmation_list(self):
-            request_data = {
-                "confirmationList": [
-                    [self.test_student.id, [self.class_one.id, self.class_two.id]],
+    def test_student_unchecked_one_class_no_24_hrs_policy_and_unchecked_another_24_hrs_policy(self):
+        request_data = {
+            "confirmationList": [
+                    {self.test_student.id: {
+                        self.class_two.id: False
+                    }}
                 ]
-            }
+        }
 
-            response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
-            self.assertEqual(response.status_code, 400)
+        response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
+        self.positive_response_helper(response, 200, "Attendance confirmed successfully")
 
-            response_data = json.loads(response.content)
-            self.assertIn("error", response_data)
-            self.assertEqual(response_data.get("error"), "Invalid data format: Each item in 'confirmationList' should be a dictionary")
+        attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
+        self.assertEqual(len(attendance_records), 1)
+        self.assertIn(self.attendance_two, attendance_records)
+        self.assertEqual(attendance_records[0].class_id.id, self.class_two.id)
+        self.assertEqual(attendance_records[0].is_showed_up, False)
+
+    def test_student_checked_one_class_and_unchecked_another_no_24_hrs_policy(self):
+        request_data = {
+            "confirmationList": [
+                    {self.test_student.id: {
+                        self.class_one.id: True,
+                    }}
+                ]
+        }
+
+        response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
+        self.positive_response_helper(response, 200, "Attendance confirmed successfully")
+
+        attendance_records = Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
+        self.assertEqual(len(attendance_records), 1)
+        self.assertIn(self.attendance_one, attendance_records)
+        self.assertEqual(attendance_records[0].class_id.id, self.class_one.id)
+
+    def test_invalid_json(self):
+        response = self.client.put(self.confirm_url, data="invalid JSON", content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+
+        response_data = json.loads(response.content)
+        self.assertIn("error", response_data)
+        self.assertEqual(response_data.get("error"), "Invalid JSON")
+
+    def test_invalid_data_format_confirmation_list_is_no_list(self):
+        request_data = {
+            "confirmationList": {}
+        }
+
+        response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+
+        response_data = json.loads(response.content)
+        self.assertIn("error", response_data)
+        self.assertEqual(response_data.get("error"), "Invalid data format: 'confirmationList' should be a list")
+
+    def test_invalid_data_format_no_dicts_in_confirmation_list(self):
+        request_data = {
+            "confirmationList": [
+                [self.test_student.id, [self.class_one.id, self.class_two.id]],
+            ]
+        }
+
+        response = self.client.put(self.confirm_url, json.dumps(request_data), content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+
+        response_data = json.loads(response.content)
+        self.assertIn("error", response_data)
+        self.assertEqual(response_data.get("error"), "Invalid data format: Each item in 'confirmationList' should be a dictionary")
 
 class AttendanceTestCase(TestCase):
     pass
 
 class PaymentTestCase(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.verify_patch = patch(
+            "backend.middleware.verify_token.verify_clerk_token",
+            return_value=FAKE_CLERK_PAYLOAD,
+        )
+        cls.verify_patch.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.verify_patch.stop()
+        super().tearDownClass()
+
     def positive_response_helper(self, response, expected_status, message):
         self.assertEqual(response.status_code, expected_status)
         response_data = json.loads(response.content)
@@ -406,6 +472,8 @@ class PaymentTestCase(TestCase):
         self.assertEqual(response_data.get("error"), error_message)
 
     def setUp(self):
+        self.client.defaults["HTTP_AUTHORIZATION"] = "Bearer test-token"
+
         self.test_student = Student.objects.create(first_name="John", last_name="Testovich")
         self.class_one = ClassModel.objects.create(name="Foil")
 
@@ -663,7 +731,24 @@ class PaymentTestCase(TestCase):
         self.assertEqual(payment_record_for_another_month.count(), 1)
 
 class ClassesTestCase(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.verify_patch = patch(
+            "backend.middleware.verify_token.verify_clerk_token",
+            return_value=FAKE_CLERK_PAYLOAD,
+        )
+        cls.verify_patch.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.verify_patch.stop()
+        super().tearDownClass()
+
     def setUp(self):
+        self.client.defaults["HTTP_AUTHORIZATION"] = "Bearer test-token"
+
         self.classes_url = reverse("classes")
         self.class_one_name = "Test Class One"
 
@@ -707,7 +792,24 @@ class ClassesTestCase(TestCase):
 
 
 class StudentsTestCase(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.verify_patch = patch(
+            "backend.middleware.verify_token.verify_clerk_token",
+            return_value=FAKE_CLERK_PAYLOAD,
+        )
+        cls.verify_patch.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.verify_patch.stop()
+        super().tearDownClass()
+
     def setUp(self):
+        self.client.defaults["HTTP_AUTHORIZATION"] = "Bearer test-token"
+
         self.students_url = reverse("students")
         self.first_name_one = "First"
         self.last_name_one = "Last"
@@ -767,7 +869,24 @@ class StudentsTestCase(TestCase):
 
 
 class SchedulesTestCase(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.verify_patch = patch(
+            "backend.middleware.verify_token.verify_clerk_token",
+            return_value=FAKE_CLERK_PAYLOAD,
+        )
+        cls.verify_patch.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.verify_patch.stop()
+        super().tearDownClass()
+
     def setUp(self):
+        self.client.defaults["HTTP_AUTHORIZATION"] = "Bearer test-token"
+
         self.schedules_url = reverse("schedules")
         self.class_one = ClassModel.objects.create(name="Foil")
         self.class_two = ClassModel.objects.create(name="Heavy sabre")
@@ -896,7 +1015,24 @@ class SchedulesTestCase(TestCase):
     # TODO: add view test for attempt to schedule two classes to the same time
 
 class TimeSlotsTestCase(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.verify_patch = patch(
+            "backend.middleware.verify_token.verify_clerk_token",
+            return_value=FAKE_CLERK_PAYLOAD,
+        )
+        cls.verify_patch.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.verify_patch.stop()
+        super().tearDownClass()
+
     def setUp(self):
+        self.client.defaults["HTTP_AUTHORIZATION"] = "Bearer test-token"
+
         self.slots_url = reverse("available_time_slots")
         self.class_one = ClassModel.objects.create(name="Foil", duration_minutes=60)
         self.class_two = ClassModel.objects.create(name="Heavy sabre", duration_minutes=90)
