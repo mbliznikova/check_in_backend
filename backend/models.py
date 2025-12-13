@@ -2,6 +2,19 @@ import datetime
 
 from django.db import models
 from django.utils.timezone import now
+from django.contrib.auth.models import AbstractUser
+
+class User(AbstractUser):
+    clerk_user_id = models.CharField(max_length=255, unique=True)
+    ROLE_CHOICES = [
+        ("teacher", "Teacher"),
+        ("admin", "Administrator"),
+        ("owner", "Owner"),
+    ]
+    role = models.CharField(max_length=50, choices=ROLE_CHOICES, default='teacher')
+
+    def __str__(self):
+        return f"{self.email} ({self.get_role_display()})"
 
 class Student(models.Model):
     id = models.AutoField(primary_key=True)

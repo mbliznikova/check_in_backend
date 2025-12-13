@@ -28,6 +28,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["192.168.1.230", "192.168.16.53"]
 
+AUTH_USER_MODEL = "backend.User"
 
 # Application definition
 
@@ -52,6 +53,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'backend.middleware.ClerkAuthenticationMiddleware',
 ]
 
 CORS_ALLOWED_ORIGINS = [
