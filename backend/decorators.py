@@ -30,6 +30,9 @@ def role_required(*allowed_roles):
     
     return decorator
 
+def any_authenticated_user(view_func):
+    return clerk_login_required(view_func)
+
 def teacher_or_above(view_func):
     return role_required("teacher", "admin", "owner")(view_func)
 
