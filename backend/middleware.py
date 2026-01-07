@@ -2,9 +2,6 @@ import os
 import jwt
 import logging
 
-from functools import wraps
-
-from django.http import JsonResponse
 from django.utils.functional import SimpleLazyObject
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
@@ -14,14 +11,6 @@ from .services import user_sync, verify_token
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
-
-def clerk_login_required(view_func):
-    @wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-        if not request.user or request.user.is_anonymous:
-            return JsonResponse({"error": "Unauthorized"}, status=401)
-        return view_func(request, *args, **kwargs)
-    return wrapper
 
 def get_clerk_user(request):
     auth_header = request.headers.get("Authorization")

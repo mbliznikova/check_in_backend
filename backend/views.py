@@ -2,7 +2,7 @@ import json
 
 from datetime import date, datetime, timedelta
 
-from .middleware import clerk_login_required
+from .decorators import clerk_login_required
 from django.db.models import Q, Sum
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
