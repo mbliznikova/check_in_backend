@@ -7,6 +7,7 @@ from django.contrib.auth.models import AbstractUser
 class User(AbstractUser):
     clerk_user_id = models.CharField(max_length=255, unique=True)
     ROLE_CHOICES = [
+        ("kiosk", "Kiosk"),
         ("teacher", "Teacher"),
         ("admin", "Administrator"),
         ("owner", "Owner"),
