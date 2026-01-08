@@ -33,7 +33,7 @@ def role_required(*allowed_roles):
 def any_authenticated_user(view_func):
     return clerk_login_required(view_func)
 
-def kiosk_and_above(view_func):
+def kiosk_or_above(view_func):
     return role_required("kiosk", "teacher", "admin", "owner")(view_func)
 
 def teacher_or_above(view_func):

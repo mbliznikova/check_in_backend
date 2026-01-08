@@ -2,7 +2,7 @@ import json
 
 from datetime import date, datetime, timedelta
 
-from .decorators import any_authenticated_user, teacher_or_above
+from .decorators import kiosk_or_above, teacher_or_above
 from django.db.models import Q, Sum
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
@@ -102,7 +102,7 @@ def classes(request):
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
-@any_authenticated_user
+@kiosk_or_above
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def class_occurrences(request):
@@ -290,7 +290,7 @@ def delete_occurrence(request, occurrence_id):
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
-@any_authenticated_user
+@kiosk_or_above
 def today_class_occurrences(request):
     today_day = date.today()
     occurrences = ClassOccurrence.objects.filter(Q(planned_date=today_day) | Q(actual_date=today_day))
@@ -637,66 +637,74 @@ def calculate_available_occurrence_time_intervals(occurrences, duration_to_fit, 
 
     return available_intervals
 
-# TODO: different permissions for GET and POST
-@any_authenticated_user
 @csrf_exempt
-@require_http_methods(["GET", "POST"])
-def students(request):
+def students_view(request):
     if request.method == "GET":
-        students = Student.objects.all()
-        serializer = StudentSerializer(students, many=True)
+        return list_students(request)
+    if request.method == "POST":
+        return create_student(request)
 
-        response = {
-            "response": serializer.data
+@csrf_exempt
+@kiosk_or_above
+@require_http_methods(["GET"])
+def list_students(request):
+    students = Student.objects.all()
+    serializer = StudentSerializer(students, many=True)
+
+    response = {
+        "response": serializer.data
+    }
+
+    return JsonResponse(response)
+
+@csrf_exempt
+@teacher_or_above
+@require_http_methods(["POST"])
+def create_student(request):
+    try:
+        request_body = json.loads(request.body)
+        first_name = request_body.get("firstName", "")
+        last_name = request_body.get("lastName", "")
+        is_liability_form_sent = request_body.get("isLiabilityFormSent")
+        emergency_contacts = request_body.get("emergencyContacts")
+
+        if not first_name or not last_name:
+            return make_error_json_response("First and last name should not be empty", 400)
+
+        data_to_write = {
+            "first_name": first_name,
+            "last_name": last_name,
         }
 
-        return JsonResponse(response)
+        if is_liability_form_sent is not None:
+            data_to_write["is_liability_form_sent"] = is_liability_form_sent
 
-    if request.method == "POST":
-        try:
-            request_body = json.loads(request.body)
-            first_name = request_body.get("firstName", "")
-            last_name = request_body.get("lastName", "")
-            is_liability_form_sent = request_body.get("isLiabilityFormSent")
-            emergency_contacts = request_body.get("emergencyContacts")
+        if emergency_contacts is not None:
+            data_to_write["emergency_contacts"] = emergency_contacts
 
-            if not first_name or not last_name:
-                return make_error_json_response("First and last name should not be empty", 400)
+        serializer = StudentSerializer(data=data_to_write)
+        if serializer.is_valid():
+            saved_student = serializer.save()
+        else:
+            return make_error_json_response(serializer.errors, 400)
 
-            data_to_write = {
-                "first_name": first_name,
-                "last_name": last_name,
+        respone = StudentSerializer.dict_to_camel_case(
+            {
+                "message": "Student was created successfully",
+                "student_id": saved_student.id,
+                "first_name": saved_student.first_name,
+                "last_name": saved_student.last_name,
+                "is_liability_form_sent": saved_student.is_liability_form_sent,
+                "emergency_contacts": saved_student.emergency_contacts,
             }
+        )
 
-            if is_liability_form_sent is not None:
-                data_to_write["is_liability_form_sent"] = is_liability_form_sent
+        return make_success_json_response(200, response_body=respone)
 
-            if emergency_contacts is not None:
-                data_to_write["emergency_contacts"] = emergency_contacts
-
-            serializer = StudentSerializer(data=data_to_write)
-            if serializer.is_valid():
-                saved_student = serializer.save()
-            else:
-                return make_error_json_response(serializer.errors, 400)
-
-            respone = StudentSerializer.dict_to_camel_case(
-                {
-                    "message": "Student was created successfully",
-                    "student_id": saved_student.id,
-                    "first_name": saved_student.first_name,
-                    "last_name": saved_student.last_name,
-                    "is_liability_form_sent": saved_student.is_liability_form_sent,
-                    "emergency_contacts": saved_student.emergency_contacts,
-                }
-            )
-
-            return make_success_json_response(200, response_body=respone)
-
-        except json.JSONDecodeError:
-            return make_error_json_response("Invalid JSON", 400)
-        except Exception as e:
-            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+    except json.JSONDecodeError:
+        return make_error_json_response("Invalid JSON", 400)
+    except Exception as e:
+        return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
 @teacher_or_above
 @csrf_exempt
@@ -777,7 +785,7 @@ def delete_student(request, student_id):
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
-@any_authenticated_user
+@kiosk_or_above
 @csrf_exempt
 @require_http_methods(["POST"])
 def check_in(request):
@@ -838,7 +846,7 @@ def check_in(request):
     except Exception as e:
         return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
-@any_authenticated_user
+@kiosk_or_above
 def get_attended_students(request):
     attended_today = Attendance.objects.filter(attendance_date=now().date())
     student_occurrence_ids = attended_today.values_list("student_id", "class_occurrence", "class_name")
