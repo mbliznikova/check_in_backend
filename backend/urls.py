@@ -27,4 +27,5 @@ urlpatterns = [
     path("schedules/<int:schedule_id>/delete/", views.delete_schedule, name="delete_schedule"),
     path("available_time_slots/", views.available_time_slots, name="available_time_slots"),
     path("available_occurrence_time/", views.available_occurrence_time, name="available_occurrence_time"),
+    path("me/", views.get_user, name="get_user"),
 ]

@@ -2,7 +2,7 @@ import json
 
 from datetime import date, datetime, timedelta
 
-from .decorators import kiosk_or_above, teacher_or_above
+from .decorators import any_authenticated_user, kiosk_or_above, teacher_or_above
 from django.db.models import Q, Sum
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
@@ -24,6 +24,16 @@ def make_success_json_response(status_code, message="Success", response_body=Non
     if response_body:
         return JsonResponse(response_body, status=status_code)
     return JsonResponse({"message": message}, status=status_code)
+
+@any_authenticated_user
+def get_user(request):
+    user = request.user
+
+    response = {
+        "role": user.role,
+    }
+
+    return make_success_json_response(200, response_body=response)
 
 # TODO: should I move it to schedules and just have a query parameter?
 def today_classes_list(request):
