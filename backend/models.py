@@ -5,8 +5,14 @@ from django.utils.timezone import now
 from django.contrib.auth.models import AbstractUser
 
 class User(AbstractUser):
-    clerk_user_id = models.CharField(max_length=255, unique=True)
+    clerk_user_id = models.CharField(
+        max_length=255,
+        unique=True,
+        null=True,
+        blank=True,
+        )
     ROLE_CHOICES = [
+        ("kiosk", "Kiosk"),
         ("teacher", "Teacher"),
         ("admin", "Administrator"),
         ("owner", "Owner"),
