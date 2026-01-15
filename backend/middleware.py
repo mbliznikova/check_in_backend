@@ -60,5 +60,8 @@ class ClerkAuthenticationMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        if request.path.startswith("/admin"):
+            return self.get_response(request)
+
         request.user = SimpleLazyObject(lambda: get_clerk_user(request))
         return self.get_response(request)
