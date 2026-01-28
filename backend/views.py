@@ -783,14 +783,14 @@ def delete_student(request, student_id):
 
             response = StudentSerializer.dict_to_camel_case(
                 {
-                    "message": f"Student {student_instance_id} was delete successfully",
+                    "message": f"Student {student_instance_id} was deleted successfully",
                     "student_id": student_instance_id,
                 }
             )
 
             return make_success_json_response(200, response_body=response)
 
-        except Schedule.DoesNotExist:
+        except Student.DoesNotExist:
             return make_error_json_response("Student not found", 404)
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
@@ -1231,6 +1231,33 @@ def payments(request):
 
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
+
+@teacher_or_above
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def delete_payment(request, payment_id):
+    try:
+        payment_instance = Payment.objects.get(id=payment_id)
+        payment_instance_id = payment_instance.id
+        payment_amount = payment_instance.amount
+
+        payment_instance.delete()
+
+        response = PaymentSerializer.dict_to_camel_case(
+            {
+                "message": f"Payment {payment_instance_id} was deleted successfully",
+                "payment_id": payment_instance_id,
+                "payment_amount": payment_amount,
+            }
+        )
+
+        return make_success_json_response(200, response_body=response)
+
+    except Payment.DoesNotExist:
+        return make_error_json_response("Payment not found", 404)
+    except Exception as e:
+            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+
 
 @teacher_or_above
 def payment_summary(request):
