@@ -5,7 +5,9 @@ import logging
 from django.utils.functional import SimpleLazyObject
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
+from django.core.exceptions import PermissionDenied
 
+from .models import School, SchoolMembership
 from .services import user_sync, verify_token
 
 logger = logging.getLogger(__name__)
@@ -54,7 +56,8 @@ class ClerkAuthenticationMiddleware:
     - Reads Clerk session token from Authorization header
     - Validates token using verify_token service (jwt)
     - Syncs Clerk user -> Django user model
-    - Attaches request.user
+    - Resolves school
+    - Attaches request.user, request.school, request.role and request.membership
     """
     def __init__(self, get_response):
         self.get_response = get_response
@@ -64,4 +67,24 @@ class ClerkAuthenticationMiddleware:
             return self.get_response(request)
 
         request.user = SimpleLazyObject(lambda: get_clerk_user(request))
+
+        if not request.user or request.user.is_anonymous:
+            return self.get_response(request)
+
+        school_id = request.headers.get("X-School-ID")
+        if not school_id:
+            raise PermissionError("Missing X-School-ID header")
+
+        try:
+            membership = SchoolMembership.objects.select_related("school").get(
+                user=request.user,
+                school_id=school_id,
+            )
+        except SchoolMembership.DoesNotExist:
+            raise PermissionDenied("You are not a member of this school")
+
+        request.school = membership.school
+        request.membership = membership
+        request.role = membership.role
+
         return self.get_response(request)
