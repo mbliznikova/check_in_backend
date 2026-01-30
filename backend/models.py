@@ -3,6 +3,23 @@ import datetime
 from django.db import models
 from django.utils.timezone import now
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
+
+class School(models.Model):
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=255)
+    clerk_org_id = models.CharField(max_length=255, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    phone = models.CharField(max_length=50, blank=True)
+    address = models.TextField(blank=True)
+    logo_url = models.URLField(blank=True)
+
+    @property
+    def owner(self):
+        return self.schoolmembership_set.filter(role="owner").first()
+
+    def __str__(self):
+        return self.name
 
 class User(AbstractUser):
     clerk_user_id = models.CharField(
@@ -10,33 +27,54 @@ class User(AbstractUser):
         unique=True,
         null=True,
         blank=True,
-        )
+    )
+
+    def __str__(self):
+        return f"{self.email})"
+
+class SchoolMembership(models.Model):
     ROLE_CHOICES = [
         ("kiosk", "Kiosk"),
         ("teacher", "Teacher"),
         ("admin", "Administrator"),
         ("owner", "Owner"),
     ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    school = models.ForeignKey(School, on_delete=models.CASCADE)
     role = models.CharField(max_length=50, choices=ROLE_CHOICES, default='teacher')
 
-    def __str__(self):
-        return f"{self.email} ({self.get_role_display()})"
+    class Meta:
+        unique_together = ("user", "school")
 
 class Student(models.Model):
     id = models.AutoField(primary_key=True)
+    school = models.ForeignKey(School, on_delete=models.CASCADE)
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     is_liability_form_sent = models.BooleanField(default=False)
     emergency_contacts = models.CharField(max_length=255, blank=True, default="")
+
+    class Meta:
+        unique_together = ("school", "first_name", "last_name")
+        indexes = [
+            models.Index(fields=["school"]),
+        ]
 
     def __str__(self):
         return f'{self.first_name} {self.last_name}'
 
 class ClassModel(models.Model):
     id = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=50, unique=True)
+    school = models.ForeignKey(School, on_delete=models.CASCADE)
+    name = models.CharField(max_length=50)
     duration_minutes = models.PositiveIntegerField(default=60)
     is_recurring = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ("school", "name")
+        indexes = [
+            models.Index(fields=["school"]),
+        ]
 
     def __str__(self):
         return self.name
@@ -49,17 +87,32 @@ class Day(models.Model):
 
 class Schedule(models.Model):
     class_model = models.ForeignKey(ClassModel, on_delete=models.CASCADE)
+    school = models.ForeignKey(School, on_delete=models.CASCADE)
     day = models.ForeignKey(Day, on_delete=models.CASCADE)
     class_time = models.TimeField()
 
     class Meta:
-        unique_together = ("day", "class_time")
+        unique_together = ("school", "day", "class_time")
+        indexes = [
+            models.Index(fields=["school"]),
+        ]
 
     def __str__(self):
         return f'{self.class_model.name} on {self.day.name} at {self.class_time}'
 
+    def clean(self):
+        if self.class_model and self.class_model.school_id != self.school_id:
+            raise ValidationError(
+                f"Class {self.class_model_id} does not belong to school {self.school_id}"
+            )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
 class ClassOccurrence(models.Model):
     id = models.AutoField(primary_key=True)
+    school = models.ForeignKey(School, on_delete=models.CASCADE)
     class_model = models.ForeignKey(ClassModel, on_delete=models.SET_NULL, null=True, blank=True) # TODO: rename to class_id?
     fallback_class_name = models.CharField(max_length=100, blank=True)
     schedule = models.ForeignKey(Schedule, on_delete=models.SET_NULL, null=True, blank=True)
@@ -88,9 +141,23 @@ class ClassOccurrence(models.Model):
         return f'{self.safe_class_name} at {date} on {time}'
 
     class Meta:
-        unique_together = ("fallback_class_name", "actual_date", "actual_start_time")
+        unique_together = ("school", "fallback_class_name", "actual_date", "actual_start_time")
+        indexes = [
+            models.Index(fields=["school"]),
+        ]
+
+    def clean(self):
+        if self.class_model and self.class_model.school_id != self.school_id:
+            raise ValidationError(
+                f"Class {self.class_model_id} does not belong to school {self.school_id}"
+            )
+
+        if self.schedule and self.schedule.school_id != self.school_id:
+            raise ValidationError(f"Schedule does not belong to school {self.school_id}")
 
     def save(self, *args, **kwargs):
+        self.clean()
+
         if self.class_model and not self.fallback_class_name:
             self.fallback_class_name = self.class_model.name
 
@@ -99,6 +166,7 @@ class ClassOccurrence(models.Model):
 
 class Attendance(models.Model):
     id = models.AutoField(primary_key=True)
+    school = models.ForeignKey(School, on_delete=models.CASCADE)
     # TODO: rename student_id and class_id to student_model and class_model?
     # Backlog? Since it would require changes in FE as well.
     student_id = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True) # TODO: rename to student?
@@ -134,12 +202,28 @@ class Attendance(models.Model):
 
     class Meta:
         # Make it unique for day-month-year? class occurrence?
-        unique_together = ("student_id", "class_occurrence")
+        unique_together = ("school", "student_id", "class_occurrence")
+        indexes = [
+            models.Index(fields=["school"]),
+        ]
 
     def __str__(self):
         return f"{self.safe_student_id} - {self.safe_class_name} ({self.attendance_date})"
 
+    def clean(self):
+        if self.student_id and self.student_id.school_id != self.school_id:
+            raise ValidationError(
+                f"Student {self.student_id} does not belong to school {self.school_id}"
+            )
+
+        if self.class_occurrence and self.class_occurrence.school_id != self.school_id:
+            raise ValidationError(
+                 f"Class occurrence {self.class_occurrence_id} does not belong to school {self.school_id}"
+            )
+
     def save(self, *args, **kwargs):
+        self.clean()
+
         if self.student_id:
             self.fallback_student_id = self.student_id.id
             if not self.student_first_name:
@@ -163,6 +247,7 @@ class Attendance(models.Model):
 
 class Payment(models.Model):
     id = models.AutoField(primary_key=True)
+    school = models.ForeignKey(School, on_delete=models.CASCADE)
     # TODO: rename student_id and class_id to student_model and class_model?
     student_id = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True)
     class_id = models.ForeignKey(ClassModel, on_delete=models.SET_NULL, null=True)
@@ -173,25 +258,61 @@ class Payment(models.Model):
     payment_month = models.IntegerField()
     payment_year = models.IntegerField()
 
+    def clean(self):
+        if self.student_id and self.student_id.school_id != self.school_id:
+            raise ValidationError(
+                f"Student {self.student_id} does not belong to school {self.school_id}"
+            )
+        if self.class_id and self.class_id.school_id != self.school_id:
+            raise ValidationError(
+                f"Class {self.class_id} does not belong to school {self.school_id}"
+            )
+
     def save(self, *args, **kwargs):
+        self.clean()
+
         if self.student_id and not self.student_name:
             self.student_name = f"{self.student_id.first_name} {self.student_id.last_name}"
         if self.class_id and not self.class_name:
             self.class_name = f"{self.class_id.name}"
         super().save(*args, **kwargs)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["school"]),
+        ]
+
 class Price(models.Model):
     id = models.AutoField(primary_key=True)
+    school = models.ForeignKey(School, on_delete=models.CASCADE)
     class_id = models.ForeignKey(ClassModel, on_delete=models.CASCADE)
     amount = models.FloatField()
 
     class Meta:
-        unique_together = ("class_id",)
+        unique_together = ("school", "class_id")
+        indexes = [
+            models.Index(fields=["school"]),
+        ]
+
+    def clean(self):
+        if self.class_id and self.class_id.school_id != self.school_id:
+            raise ValidationError(f"Class {self.class_id} does not belong to school {self.school_id}")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
 class MonthlyPaymentsSummary(models.Model):
     id = models.AutoField(primary_key=True)
+    school = models.ForeignKey(School, on_delete=models.CASCADE)
     summary_date = models.DateField(help_text="Only the month and year are meaningful. Day will always be set to 1.")
     amount = models.FloatField()
+
+    class Meta:
+        unique_together = ("school", "summary_date")
+        indexes = [
+            models.Index(fields=["school"]),
+        ]
 
     def save(self, *args, **kwargs):
         if self.summary_date:
