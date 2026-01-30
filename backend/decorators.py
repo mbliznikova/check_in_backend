@@ -18,7 +18,11 @@ def role_required(*allowed_roles):
 
             if not user or request.user.is_anonymous:
                 return JsonResponse({"error": "Unauthorized"}, status=401)
-            if user.role not in allowed_roles:
+
+            if not hasattr(request, "role"):
+                return JsonResponse({"error": "School context missing"}, status=400)
+
+            if request.role not in allowed_roles:
                 return JsonResponse({
                     "error": "Forbidden",
                     "message": f"This action requires one of these roles: {', '.join(allowed_roles)}",
