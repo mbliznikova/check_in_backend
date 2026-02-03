@@ -40,6 +40,9 @@ class CaseSerializer(serializers.ModelSerializer):
                 result[key] = value
         return result
 
+    class Meta:
+        read_only_fields = ('school',)
+
 class StudentSerializer(CaseSerializer):
     class Meta:
         model = Student

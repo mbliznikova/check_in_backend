@@ -27,10 +27,10 @@ def make_success_json_response(status_code, message="Success", response_body=Non
 
 @any_authenticated_user
 def get_user(request):
-    user = request.user
-
     response = {
-        "role": user.role,
+        "role": request.membership.role,
+        "school": request.school.id,
+        "school_name": request.school.name,
     }
 
     return make_success_json_response(200, response_body=response)
@@ -42,10 +42,18 @@ def today_classes_list(request):
     today_day_object = Day.objects.filter(name=today_name).first()
     # TODO: handle the case when there is no such objects? Empty list in response?
     # Assume (for now) that it always be, because the table should be pre-populated with all weekdays?
+    if not today_day_object:
+        return JsonResponse({"response": []})  # TODO: refactor
 
-    scheduled_today = Schedule.objects.filter(day=today_day_object).values("class_model")
+    scheduled_today = Schedule.objects.filter(
+            school=request.school,
+            day=today_day_object
+        ).values("class_model")
 
-    classes = ClassModel.objects.filter(id__in=scheduled_today)
+    classes = ClassModel.objects.filter(
+        id__in=scheduled_today,
+        school=request.school,
+        )
     # Should they be sorted? If yes, how? Alphabetical or based on scheduled time?
 
     serializer = ClassModelSerializer(classes, many=True)
@@ -61,7 +69,7 @@ def today_classes_list(request):
 @require_http_methods(["GET", "POST"])
 def classes(request):
     if request.method == "GET":
-        classes = ClassModel.objects.all()
+        classes = ClassModel.objects.filter(school=request.school)
         serializer = ClassModelSerializer(classes, many=True)
 
         response = {
@@ -91,7 +99,7 @@ def classes(request):
 
             serializer = ClassModelSerializer(data=data_to_write)
             if serializer.is_valid():
-                saved_class = serializer.save()
+                saved_class = serializer.save(school=request.school)
             else:
                 return make_error_json_response(serializer.errors, 400)
 
@@ -119,9 +127,14 @@ def class_occurrences(request):
     if request.method == "GET":
         class_id = request.GET.get("class_id")
         if class_id:
-            occurrences = ClassOccurrence.objects.filter(class_model=class_id)
+            occurrences = ClassOccurrence.objects.filter(
+                class_model=class_id,
+                school=request.school,
+                )
         else:
-            occurrences = ClassOccurrence.objects.all()
+            occurrences = ClassOccurrence.objects.filter(
+                school=request.school,
+            )
         serializer = ClassOccurrenceSerializer(occurrences, many=True)
 
         response = {
@@ -180,7 +193,7 @@ def class_occurrences(request):
 
             serializer = ClassOccurrenceSerializer(data=data_to_write)
             if serializer.is_valid():
-                saved_occurrence = serializer.save()
+                saved_occurrence = serializer.save(school=request.school)
             else:
                 return make_error_json_response(serializer.errors, 400)
 
@@ -208,7 +221,10 @@ def class_occurrences(request):
 def edit_occurrence(request, occurrence_id):
     if request.method == "PATCH":
         try:
-            occurrence_instance = ClassOccurrence.objects.get(id=occurrence_id)
+            occurrence_instance = ClassOccurrence.objects.get(
+                id=occurrence_id,
+                school=request.school,
+                )
 
             request_body = json.loads(request.body)
             actual_date_str = request_body.get("actualDate")
@@ -252,7 +268,7 @@ def edit_occurrence(request, occurrence_id):
 
             serializer = ClassOccurrenceSerializer(occurrence_instance, data=data_to_write, partial=True)
             if serializer.is_valid():
-                serializer.save()
+                serializer.save(school=request.school)
             else:
                 return make_error_json_response(serializer.errors, 400)
 
@@ -278,7 +294,10 @@ def edit_occurrence(request, occurrence_id):
 def delete_occurrence(request, occurrence_id):
     if request.method == "DELETE":
         try:
-           occurrence_instance = ClassOccurrence.objects.get(id=occurrence_id)
+           occurrence_instance = ClassOccurrence.objects.get(
+               id=occurrence_id,
+               school=request.school,
+               )
            occurrence_instance_id = occurrence_instance.id
            class_name = occurrence_instance.safe_class_name
            class_actual_date = occurrence_instance.actual_date
@@ -303,7 +322,11 @@ def delete_occurrence(request, occurrence_id):
 @kiosk_or_above
 def today_class_occurrences(request):
     today_day = date.today()
-    occurrences = ClassOccurrence.objects.filter(Q(planned_date=today_day) | Q(actual_date=today_day))
+    occurrences = ClassOccurrence.objects.filter(
+        school=request.school,
+        ).filter(
+            Q(planned_date=today_day) | Q(actual_date=today_day)
+            )
 
     serializer = ClassOccurrenceSerializer(occurrences, many=True)
 
@@ -319,7 +342,10 @@ def today_class_occurrences(request):
 def edit_class(request, class_id):
     if request.method == "PUT":
         try:
-            class_instance = ClassModel.objects.get(id=class_id)
+            class_instance = ClassModel.objects.get(
+                id=class_id,
+                school=request.school,
+                )
 
             request_body = json.loads(request.body)
             class_name = request_body.get("name")
@@ -366,7 +392,10 @@ def edit_class(request, class_id):
 def delete_class(request, class_id):
     if request.method == "DELETE":
         try:
-           class_instance = ClassModel.objects.get(id=class_id)
+           class_instance = ClassModel.objects.get(
+               id=class_id,
+               school=request.school,
+               )
            class_instance_id = class_instance.id
            class_instance_name = class_instance.name
 
@@ -393,7 +422,10 @@ def delete_class(request, class_id):
 def delete_schedule(request, schedule_id):
     if request.method == "DELETE":
         try:
-            schedule_instance = Schedule.objects.get(id=schedule_id)
+            schedule_instance = Schedule.objects.get(
+                id=schedule_id,
+                school=request.school,
+                )
             schedule_instance_id = schedule_instance.id
 
             schedule_instance.delete()
@@ -419,9 +451,14 @@ def schedules(request):
     if request.method == "GET":
         class_id = request.GET.get("class_id")
         if class_id:
-            schedules = Schedule.objects.filter(class_model=class_id)
+            schedules = Schedule.objects.filter(
+                class_model=class_id,
+                school=request.school,
+                )
         else:
-            schedules = Schedule.objects.all()
+            schedules = Schedule.objects.filter(
+                school=request.school,
+            )
         serializer = ScheduleSerializer(schedules, many=True)
 
         response = {
@@ -441,7 +478,10 @@ def schedules(request):
                 return make_error_json_response("Missing required fields", 400)
 
             try:
-                class_model = ClassModel.objects.get(id=class_id)
+                class_model = ClassModel.objects.get(
+                    id=class_id,
+                    school=request.school,
+                    )
             except ClassModel.DoesNotExist:
                 return make_error_json_response("Class not found", 404)
 
@@ -465,7 +505,7 @@ def schedules(request):
 
             serializer = ScheduleSerializer(data=data_to_write)
             if serializer.is_valid():
-                saved_schedule = serializer.save()
+                saved_schedule = serializer.save(school=request.school)
             else:
                 return make_error_json_response(serializer.errors, 400)
 
@@ -513,7 +553,10 @@ def available_time_slots(request):
     except ObjectDoesNotExist:
         return make_error_json_response(f"Day {day_param} does not exist", 400)
 
-    schedules = Schedule.objects.filter(day=day_obj)
+    schedules = Schedule.objects.filter(
+        day=day_obj,
+        school=request.school,
+        )
 
     available_slots = calculate_available_time_slots(schedules, duration_minutes)
 
@@ -549,7 +592,10 @@ def available_occurrence_time(request):
     except ValueError:
         return make_error_json_response("Invalid duration_minutes format", 400)
 
-    occurrences = ClassOccurrence.objects.filter(actual_date=parsed_date)
+    occurrences = ClassOccurrence.objects.filter(
+        actual_date=parsed_date,
+        school=request.school,
+        )
 
     available_slots = calculate_available_occurrence_time_intervals(occurrences, duration_minutes, parsed_date)
 
@@ -658,7 +704,9 @@ def students_view(request):
 @kiosk_or_above
 @require_http_methods(["GET"])
 def list_students(request):
-    students = Student.objects.all()
+    students = Student.objects.filter(
+        school=request.school,
+    )
     serializer = StudentSerializer(students, many=True)
 
     response = {
@@ -694,7 +742,7 @@ def create_student(request):
 
         serializer = StudentSerializer(data=data_to_write)
         if serializer.is_valid():
-            saved_student = serializer.save()
+            saved_student = serializer.save(school=request.school)
         else:
             return make_error_json_response(serializer.errors, 400)
 
@@ -722,7 +770,10 @@ def create_student(request):
 def edit_student(request, student_id):
     if request.method == "PUT":
         try:
-            student_instance = Student.objects.get(id=student_id)
+            student_instance = Student.objects.get(
+                id=student_id,
+                school=request.school,
+                )
 
             request_body = json.loads(request.body)
             first_name = request_body.get("firstName")
@@ -776,7 +827,10 @@ def edit_student(request, student_id):
 def delete_student(request, student_id):
     if request.method == "DELETE":
         try:
-            student_instance = Student.objects.get(id=student_id)
+            student_instance = Student.objects.get(
+                id=student_id,
+                school=request.school,
+                )
             student_instance_id = student_instance.id
 
             student_instance.delete()
@@ -813,7 +867,13 @@ def check_in(request):
             return make_error_json_response("Missing required fields", 400)
 
         # TODO: add parsing for today_date?
-        existing_occurrences = set(Attendance.objects.filter(student_id=student_id, attendance_date=today_date).values_list("class_occurrence", flat=True))
+        existing_occurrences = set(
+            Attendance.objects.filter(
+                student_id=student_id,
+                attendance_date=today_date,
+                school=request.school,
+                ).values_list("class_occurrence", flat=True)
+            )
         to_add = set(class_occurrences_list) - existing_occurrences
         to_delete = existing_occurrences - set(class_occurrences_list)
 
@@ -829,13 +889,18 @@ def check_in(request):
             serializer = AttendanceSerializer(data=data_to_write)
 
             if serializer.is_valid():
-                serializer.save()
+                serializer.save(school=request.school)
                 to_add_response.append(occ)
             else:
                 return make_error_json_response(serializer.errors, 400)
 
         if to_delete:
-            Attendance.objects.filter(student_id=student_id, attendance_date=today_date, class_occurrence__in=to_delete).delete()
+            Attendance.objects.filter(
+                student_id=student_id,
+                attendance_date=today_date,
+                class_occurrence__in=to_delete,
+                school=request.school,
+                ).delete()
 
             for occ in to_delete:
                 to_delete_response.append(occ)
@@ -858,7 +923,10 @@ def check_in(request):
 
 @kiosk_or_above
 def get_attended_students(request):
-    attended_today = Attendance.objects.filter(attendance_date=now().date())
+    attended_today = Attendance.objects.filter(
+        attendance_date=now().date(),
+        school=request.school,
+        )
     student_occurrence_ids = attended_today.values_list("student_id", "class_occurrence", "class_name")
 
     student_occurrence = {}
@@ -866,7 +934,10 @@ def get_attended_students(request):
     for student_id, occurrence_id, class_name in student_occurrence_ids:
         student_occurrence.setdefault(student_id, []).append([occurrence_id, class_name])
 
-    students_attended_today_occ = Student.objects.filter(id__in=student_occurrence.keys())
+    students_attended_today_occ = Student.objects.filter(
+        id__in=student_occurrence.keys(),
+        school=request.school,
+        )
 
     response = CaseSerializer.dict_to_camel_case(
         {
@@ -896,7 +967,10 @@ def confirm(request):
         # TODO: what would be the default today_date value?
         confirmation_day = request_body.get("date", now().date())
 
-        attended_today = Attendance.objects.filter(attendance_date=confirmation_day)
+        attended_today = Attendance.objects.filter(
+            attendance_date=confirmation_day,
+            school=request.school,
+            )
 
         if not isinstance(confirmation_list, list):
             return make_error_json_response("Invalid data format: 'confirmationList' should be a list", 400)
@@ -932,7 +1006,10 @@ def confirm(request):
                 to_update.append(attendance)
 
         if to_delete:
-            Attendance.objects.filter(id__in=to_delete).delete()
+            Attendance.objects.filter(
+                id__in=to_delete,
+                school=request.school,
+                ).delete()
 
         if to_update:
             Attendance.objects.bulk_update(to_update, ["is_showed_up"])
@@ -969,14 +1046,18 @@ def attendance_list(request):
             if not (2000 <= request_year <= now().year + 1):
                 return make_error_json_response(f"Invalid year: {request_year}", 400)
 
-            attendances = Attendance.objects.all().order_by("-attendance_date").filter(
+            attendances = Attendance.objects.filter(
+                school=request.school,
+            ).order_by("-attendance_date").filter(
                 attendance_date__month=request_month,
                 attendance_date__year=request_year
             )
         except ValueError:
             return make_error_json_response("Invalid month or year", 400)
     else:
-        attendances = Attendance.objects.all().order_by("-attendance_date")
+        attendances = Attendance.objects.filter(
+            school=request.school,
+        ).order_by("-attendance_date")
 
     attendance_dict = {}
 
@@ -1030,7 +1111,9 @@ def attendance_list(request):
 @require_http_methods(["GET", "POST"])
 def prices(request):
     if request.method == "GET":
-        prices = Price.objects.all()
+        prices = Price.objects.filter(
+            school=request.school,
+        )
 
         price_dict = {}
 
@@ -1061,11 +1144,17 @@ def prices(request):
                 return make_error_json_response("Missing required fields", 400)
 
             try:
-                class_instance = ClassModel.objects.get(id=class_id)
+                class_instance = ClassModel.objects.get(
+                    id=class_id,
+                    school=request.school,
+                    )
             except ObjectDoesNotExist:
                 return make_error_json_response(f"Class {class_id} does not exist", 400)
 
-            if Price.objects.filter(class_id=class_instance).exists():
+            if Price.objects.filter(
+                class_id=class_instance,
+                school=request.school,
+                ).exists():
                 return make_error_json_response(f"Price already exists for class {class_id}", 400)
 
             data_to_write = {
@@ -1075,7 +1164,7 @@ def prices(request):
 
             serializer = PriceSerializer(data=data_to_write)
             if serializer.is_valid():
-                saved_price = serializer.save()
+                saved_price = serializer.save(school=request.school)
             else:
                 return make_error_json_response(serializer.errors, 400)
 
@@ -1097,7 +1186,10 @@ def prices(request):
 def edit_price(request, price_id):
     if request.method == "PATCH":
         try:
-            price = Price.objects.get(id=price_id)
+            price = Price.objects.get(
+                id=price_id,
+                school=request.school,
+                )
 
             request_body = json.loads(request.body)
             amount = request_body.get("amount")
@@ -1109,7 +1201,7 @@ def edit_price(request, price_id):
 
             serializer = PriceSerializer(price, data=data_to_write, partial=True)
             if serializer.is_valid():
-                serializer.save()
+                serializer.save(school=request.school)
             else:
                 return make_error_json_response(serializer.errors, 400)
 
@@ -1131,7 +1223,9 @@ def payments(request):
     if request.method == "GET":
         payment_month_param = request.GET.get('month', now().month)
         payment_year_param = request.GET.get('year', now().year)
-        payments = Payment.objects.all().filter(
+        payments = Payment.objects.filter(
+            school=request.school,
+        ).filter(
             payment_month = payment_month_param,
             payment_year = payment_year_param)
         serializer = PaymentSerializer(payments, many=True)
@@ -1163,14 +1257,20 @@ def payments(request):
 
             if not student_name:
                 try:
-                    student = Student.objects.get(id=student_id)
+                    student = Student.objects.get(
+                        id=student_id,
+                        school=request.school,
+                        )
                     student_name = f"{student.first_name} {student.last_name}"
                 except Student.DoesNotExist:
                     return make_error_json_response("Student not found", 404)
 
             if not class_name:
                 try:
-                    cls = ClassModel.objects.get(id=class_id)
+                    cls = ClassModel.objects.get(
+                        id=class_id,
+                        school=request.school,
+                        )
                     class_name = f"{cls.name}"
                 except ClassModel.DoesNotExist:
                     return make_error_json_response("Class not found", 404)
@@ -1208,7 +1308,7 @@ def payments(request):
             serializer = PaymentSerializer(data=data_to_write)
 
             if serializer.is_valid():
-                saved_payment = serializer.save()
+                saved_payment = serializer.save(school=request.school)
             else:
                 return make_error_json_response(serializer.errors, 400)
 
@@ -1237,7 +1337,10 @@ def payments(request):
 @require_http_methods(["DELETE"])
 def delete_payment(request, payment_id):
     try:
-        payment_instance = Payment.objects.get(id=payment_id)
+        payment_instance = Payment.objects.get(
+            id=payment_id,
+            school=request.school,
+            )
         payment_instance_id = payment_instance.id
         payment_amount = payment_instance.amount
 
@@ -1269,8 +1372,9 @@ def payment_summary(request):
     payment_year_param = request.GET.get("year", now().year)
 
     payment_summary = Payment.objects.filter(
+        school=request.school,
         payment_year = payment_year_param,
-        payment_month = payment_month_param
+        payment_month = payment_month_param,
     )
 
     new_summary = payment_summary.aggregate(Sum("amount"))["amount__sum"] or 0.0
@@ -1278,8 +1382,9 @@ def payment_summary(request):
     # TODO: handle logic to add new entry for MonthlyPaymentsSummary or update the existing one
     # if new_summary != old_summary or not old_summary:
     old_summary = MonthlyPaymentsSummary.objects.filter(
+        school=request.school,
         summary_date__year = now().year,
-        summary_date__month = now().month
+        summary_date__month = now().month,
     )
 
     summary = {"summary": new_summary}
