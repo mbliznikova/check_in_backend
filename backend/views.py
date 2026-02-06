@@ -12,7 +12,7 @@ from django.utils.timezone import now, is_naive, make_aware
 from django.utils.dateparse import parse_datetime, parse_date, parse_time
 from django.core.exceptions import ObjectDoesNotExist
 
-from .models import ClassModel, Student, Day, Schedule, Attendance, Price, Payment, ClassOccurrence
+from .models import ClassModel, Student, Day, Schedule, Attendance, Price, Payment, ClassOccurrence, SchoolMembership
 from .serializers import CaseSerializer, StudentSerializer, ClassModelSerializer, AttendanceSerializer,\
     PaymentSerializer, MonthlyPaymentsSummary, ScheduleSerializer, ClassOccurrenceSerializer, PriceSerializer
 
@@ -27,10 +27,20 @@ def make_success_json_response(status_code, message="Success", response_body=Non
 
 @any_authenticated_user
 def get_user(request):
+    memberships = SchoolMembership.objects.select_related("school").filter(
+        user=request.user
+    )
+
     response = {
-        "role": request.membership.role,
-        "school": request.school.id,
-        "school_name": request.school.name,
+        "user_id": request.user.id,
+        "memberships": [
+            {
+                "shool_id": m.school.id,
+                "school_name": m.school.name,
+                "role": m.role,
+            }
+            for m in memberships
+        ],
     }
 
     return make_success_json_response(200, response_body=response)

@@ -68,6 +68,9 @@ class ClerkAuthenticationMiddleware:
 
         request.user = SimpleLazyObject(lambda: get_clerk_user(request))
 
+        if request.path == "/backend/me/":
+            return self.get_response(request)
+
         if not request.user or request.user.is_anonymous:
             return self.get_response(request)
 
