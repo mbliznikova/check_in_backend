@@ -34,14 +34,16 @@ def get_user(request):
     response = {
         "user_id": request.user.id,
         "memberships": [
-            {
-                "shool_id": m.school.id,
+            CaseSerializer.dict_to_camel_case({
+                "school_id": m.school.id,
                 "school_name": m.school.name,
                 "role": m.role,
-            }
+            })
             for m in memberships
         ],
     }
+
+    response = CaseSerializer.dict_to_camel_case(response)
 
     return make_success_json_response(200, response_body=response)
 
