@@ -12,9 +12,10 @@ from django.utils.timezone import now, is_naive, make_aware
 from django.utils.dateparse import parse_datetime, parse_date, parse_time
 from django.core.exceptions import ObjectDoesNotExist
 
-from .models import ClassModel, Student, Day, Schedule, Attendance, Price, Payment, ClassOccurrence, SchoolMembership
+from .models import ClassModel, Student, Day, Schedule, Attendance, Price, Payment, ClassOccurrence, SchoolMembership, School
 from .serializers import CaseSerializer, StudentSerializer, ClassModelSerializer, AttendanceSerializer,\
-    PaymentSerializer, MonthlyPaymentsSummary, ScheduleSerializer, ClassOccurrenceSerializer, PriceSerializer
+    PaymentSerializer, MonthlyPaymentsSummary, ScheduleSerializer, ClassOccurrenceSerializer, PriceSerializer, SchoolSerializer
+from .decorators import any_authenticated_user, kiosk_or_above, teacher_or_above, admin_or_owner
 
 # TODO: have parameters more consistent, i.e. have status code at the same order
 def make_error_json_response(error_message, status_code):
@@ -1406,3 +1407,82 @@ def payment_summary(request):
     }
 
     return make_success_json_response(200, response_body=response)
+
+
+@any_authenticated_user
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def schools(request):
+    """
+    GET: List all schools the current user has membership in.
+    POST: Create a new school and assign current user as owner.
+    """
+    if request.method == "GET":
+        try:
+            memberships = SchoolMembership.objects.filter(user=request.user).select_related('school')
+            schools = [membership.school for membership in memberships]
+            serializer = SchoolSerializer(schools, many=True)
+            response = {"response": serializer.data}
+            return JsonResponse(response)
+        except Exception as e:
+            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+
+    elif request.method == "POST":
+        try:
+            request_body = json.loads(request.body)
+            name = request_body.get("name")
+            clerk_org_id = request_body.get("clerkOrgId")
+            phone = request_body.get("phone", "")
+            address = request_body.get("address", "")
+            logo_url = request_body.get("logoUrl", "")
+
+            if not name or not clerk_org_id:
+                return make_error_json_response("Name and clerkOrgId are required", 400)
+
+            if School.objects.filter(clerk_org_id=clerk_org_id).exists():
+                return make_error_json_response("School with this clerk organization ID already exists", 400)
+
+            school = School.objects.create(
+                name=name,
+                clerk_org_id=clerk_org_id,
+                phone=phone,
+                address=address,
+                logo_url=logo_url
+            )
+
+            # make the user, who created a school, its owner
+            SchoolMembership.objects.create(
+                user=request.user,
+                school=school,
+                role="owner"
+            )
+
+            serializer = SchoolSerializer(school)
+            response = {"message": "School created successfully", **serializer.data}
+            return make_success_json_response(201, response_body=response)
+
+        except json.JSONDecodeError:
+            return make_error_json_response("Invalid JSON", 400)
+        except Exception as e:
+            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+
+
+@admin_or_owner
+@csrf_exempt
+@require_http_methods(["GET"])
+def school_detail(request, school_id):
+    pass
+
+
+@admin_or_owner
+@csrf_exempt
+@require_http_methods(["PATCH"])
+def edit_school(request, school_id):
+    pass
+
+
+@admin_or_owner
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def delete_school(request, school_id):
+    pass

@@ -29,4 +29,8 @@ urlpatterns = [
     path("available_time_slots/", views.available_time_slots, name="available_time_slots"),
     path("available_occurrence_time/", views.available_occurrence_time, name="available_occurrence_time"),
     path("me/", views.get_user, name="get_user"),
+    path("schools/", views.schools, name="schools"),
+    path("schools/<int:school_id>/", views.school_detail, name="school_detail"),
+    path("schools/<int:school_id>/edit/", views.edit_school, name="edit_school"),
+    path("schools/<int:school_id>/delete/", views.delete_school, name="delete_school"),
 ]
