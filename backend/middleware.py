@@ -51,6 +51,9 @@ def get_clerk_user(request):
         logger.exception(f"Unexpected Clerk auth error: {e}")
         return AnonymousUser()
 
+# Paths that do not require school membership validation
+EXEMPT_PATHS = {"/backend/me/", "/backend/schools/"}
+
 class ClerkAuthenticationMiddleware:
     """
     - Reads Clerk session token from Authorization header
@@ -68,7 +71,7 @@ class ClerkAuthenticationMiddleware:
 
         request.user = SimpleLazyObject(lambda: get_clerk_user(request))
 
-        if request.path == "/backend/me/":
+        if request.path in EXEMPT_PATHS:
             return self.get_response(request)
 
         if not request.user or request.user.is_anonymous:

@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+from corsheaders.defaults import default_headers
 from celery.schedules import crontab
 from pathlib import Path
 
@@ -58,6 +59,10 @@ MIDDLEWARE = [
 
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:8081',
+]
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "X-School-ID",
 ]
 
 ROOT_URLCONF = 'check_in_backend.urls'
