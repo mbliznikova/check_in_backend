@@ -1409,7 +1409,7 @@ def payment_summary(request):
     return make_success_json_response(200, response_body=response)
 
 
-@any_authenticated_user
+# @any_authenticated_user
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def schools(request):
@@ -1471,18 +1471,86 @@ def schools(request):
 @csrf_exempt
 @require_http_methods(["GET"])
 def school_detail(request, school_id):
-    pass
+    try:
+        school = School.objects.get(id=school_id)
+        serializer = SchoolSerializer(school)
+        response = {"response": serializer.data}
+        return JsonResponse(response)
+    except School.DoesNotExist:
+        return make_error_json_response("School not found", 404)
+    except Exception as e:
+        return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
 
 @admin_or_owner
 @csrf_exempt
 @require_http_methods(["PATCH"])
 def edit_school(request, school_id):
-    pass
+    try:
+        school = School.objects.get(id=school_id)
+
+        request_body = json.loads(request.body)
+        name = request_body.get("name")
+        phone = request_body.get("phone")
+        address = request_body.get("address")
+        logo_url = request_body.get("logoUrl")
+
+        data_to_write = {}
+        if name is not None:
+            if not name.strip():
+                return make_error_json_response("School name cannot be empty", 400)
+            data_to_write["name"] = name
+        if phone is not None:
+            data_to_write["phone"] = phone
+        if address is not None:
+            data_to_write["address"] = address
+        if logo_url is not None:
+            data_to_write["logo_url"] = logo_url
+
+        if not data_to_write:
+            return make_error_json_response("No fields to update", 400)
+
+        serializer = SchoolSerializer(school, data=data_to_write, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            return make_error_json_response(serializer.errors, 400)
+
+        response = {
+            "message": "School was updated successfully",
+            "school_id": school.id,
+            **serializer.data,
+        }
+        return make_success_json_response(200, response_body=response)
+
+    except School.DoesNotExist:
+        return make_error_json_response("School not found", 404)
+    except json.JSONDecodeError:
+        return make_error_json_response("Invalid JSON", 400)
+    except Exception as e:
+        return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
 
 @admin_or_owner
 @csrf_exempt
 @require_http_methods(["DELETE"])
 def delete_school(request, school_id):
-    pass
+    try:
+        school = School.objects.get(id=school_id)
+        school_id_val = school.id
+        school_name = school.name
+
+        school.delete()
+
+        response = SchoolSerializer.dict_to_camel_case(
+            {
+                "message": f"School {school_name} was deleted successfully",
+                "school_id": school_id_val,
+            }
+        )
+        return make_success_json_response(200, response_body=response)
+
+    except School.DoesNotExist:
+        return make_error_json_response("School not found", 404)
+    except Exception as e:
+        return make_error_json_response(f"An unexpected error occurred: {e}", 500)
