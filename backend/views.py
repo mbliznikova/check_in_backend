@@ -131,7 +131,7 @@ def classes(request):
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
         except Exception as e:
-            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+            return make_error_json_response(f"An internal error occurred", 500)
 
 @kiosk_or_above
 @csrf_exempt
@@ -226,7 +226,7 @@ def class_occurrences(request):
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
         except Exception as e:
-            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+            return make_error_json_response(f"An internal error occurred", 500)
 
 @teacher_or_above
 @csrf_exempt
@@ -298,7 +298,7 @@ def edit_occurrence(request, occurrence_id):
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
         except Exception as e:
-            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+            return make_error_json_response(f"An internal error occurred", 500)
 
 
 @teacher_or_above
@@ -330,7 +330,7 @@ def delete_occurrence(request, occurrence_id):
         except ClassOccurrence.DoesNotExist:
             return make_error_json_response("Class Occurrence not found", 404)
         except Exception as e:
-            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+            return make_error_json_response(f"An internal error occurred", 500)
 
 @kiosk_or_above
 def today_class_occurrences(request):
@@ -397,7 +397,7 @@ def edit_class(request, class_id):
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
         except Exception as e:
-            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+            return make_error_json_response(f"An internal error occurred", 500)
 
 @teacher_or_above
 @csrf_exempt
@@ -427,7 +427,7 @@ def delete_class(request, class_id):
         except ClassModel.DoesNotExist:
             return make_error_json_response("Class not found", 404)
         except Exception as e:
-            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+            return make_error_json_response(f"An internal error occurred", 500)
 
 @teacher_or_above
 @csrf_exempt
@@ -455,7 +455,7 @@ def delete_schedule(request, schedule_id):
         except Schedule.DoesNotExist:
             return make_error_json_response("Schedule not found", 404)
         except Exception as e:
-            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+            return make_error_json_response(f"An internal error occurred", 500)
 
 @teacher_or_above
 @csrf_exempt
@@ -540,7 +540,7 @@ def schedules(request):
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
         except Exception as e:
-            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+            return make_error_json_response(f"An internal error occurred", 500)
 
 @teacher_or_above
 @csrf_exempt
@@ -776,7 +776,7 @@ def create_student(request):
     except json.JSONDecodeError:
         return make_error_json_response("Invalid JSON", 400)
     except Exception as e:
-        return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+        return make_error_json_response(f"An internal error occurred", 500)
 
 @teacher_or_above
 @csrf_exempt
@@ -833,7 +833,7 @@ def edit_student(request, student_id):
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
         except Exception as e:
-            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+            return make_error_json_response(f"An internal error occurred", 500)
 
 @teacher_or_above
 @csrf_exempt
@@ -861,7 +861,7 @@ def delete_student(request, student_id):
         except Student.DoesNotExist:
             return make_error_json_response("Student not found", 404)
         except Exception as e:
-            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+            return make_error_json_response(f"An internal error occurred", 500)
 
 @require_http_methods(["POST"])
 @csrf_exempt
@@ -933,7 +933,7 @@ def check_in(request):
     except json.JSONDecodeError:
         return make_error_json_response("Invalid JSON", 400)
     except Exception as e:
-        return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+        return make_error_json_response(f"An internal error occurred", 500)
 
 @require_http_methods(["GET"])
 @kiosk_or_above
@@ -1038,7 +1038,7 @@ def confirm(request):
     except json.JSONDecodeError:
         return make_error_json_response("Invalid JSON", 400)
     except Exception as e:
-        return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+        return make_error_json_response(f"An internal error occurred", 500)
 
 @require_http_methods(["GET"])
 @teacher_or_above
@@ -1375,7 +1375,7 @@ def delete_payment(request, payment_id):
     except Payment.DoesNotExist:
         return make_error_json_response("Payment not found", 404)
     except Exception as e:
-            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+            return make_error_json_response(f"An internal error occurred", 500)
 
 
 @require_http_methods(["GET"])
@@ -1429,7 +1429,7 @@ def schools(request):
             response = {"response": serializer.data}
             return make_success_json_response(200, response_body=response)
         except Exception as e:
-            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+            return make_error_json_response(f"An internal error occurred", 500)
 
     elif request.method == "POST":
         try:
@@ -1468,7 +1468,7 @@ def schools(request):
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
         except Exception as e:
-            return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+            return make_error_json_response(f"An internal error occurred", 500)
 
 
 @admin_or_owner
@@ -1483,7 +1483,7 @@ def school_detail(request, school_id):
     except School.DoesNotExist:
         return make_error_json_response("School not found", 404)
     except Exception as e:
-        return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+        return make_error_json_response(f"An internal error occurred", 500)
 
 
 @admin_or_owner
@@ -1532,7 +1532,7 @@ def edit_school(request, school_id):
     except json.JSONDecodeError:
         return make_error_json_response("Invalid JSON", 400)
     except Exception as e:
-        return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+        return make_error_json_response(f"An internal error occurred", 500)
 
 
 @admin_or_owner
@@ -1557,4 +1557,4 @@ def delete_school(request, school_id):
     except School.DoesNotExist:
         return make_error_json_response("School not found", 404)
     except Exception as e:
-        return make_error_json_response(f"An unexpected error occurred: {e}", 500)
+        return make_error_json_response(f"An internal error occurred", 500)
