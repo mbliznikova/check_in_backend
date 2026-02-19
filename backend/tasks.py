@@ -28,7 +28,7 @@ def create_class_occurrences():
         "sunday": 7,
     }
 
-    schedules = Schedule.objects.select_related("class_model", "day").all()
+    schedules = Schedule.objects.select_related("class_model", "day", "school").all()
 
     occurrences_to_create = []
 
@@ -47,6 +47,7 @@ def create_class_occurrences():
             continue
 
         occurrence = ClassOccurrence(
+            school=schedule.school,
             class_model=schedule.class_model,
             fallback_class_name=schedule.class_model.name,
             schedule=schedule,
