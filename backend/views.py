@@ -56,7 +56,7 @@ def today_classes_list(request):
     # TODO: handle the case when there is no such objects? Empty list in response?
     # Assume (for now) that it always be, because the table should be pre-populated with all weekdays?
     if not today_day_object:
-        return JsonResponse({"response": []})  # TODO: refactor
+        return make_success_json_response(200, response_body={"response": []})  # TODO: refactor
 
     scheduled_today = Schedule.objects.filter(
             school=request.school,
@@ -75,7 +75,7 @@ def today_classes_list(request):
         "response": serializer.data
     }
 
-    return JsonResponse(response)
+    return make_success_json_response(200, response_body=response)
 
 @teacher_or_above
 @csrf_exempt
@@ -89,7 +89,7 @@ def classes(request):
             "response": serializer.data
         }
 
-        return JsonResponse(response)
+        return make_success_json_response(200, response_body=response)
     if request.method == "POST":
         try:
             request_body = json.loads(request.body)
@@ -154,7 +154,7 @@ def class_occurrences(request):
             "response": serializer.data
         }
 
-        return JsonResponse(response)
+        return make_success_json_response(200, response_body=response)
 
     if request.method == "POST":
         try:
@@ -478,7 +478,7 @@ def schedules(request):
             "response": serializer.data
         }
 
-        return JsonResponse(response)
+        return make_success_json_response(200, response_body=response)
 
     if request.method == "POST":
         try:
@@ -726,7 +726,7 @@ def list_students(request):
         "response": serializer.data
     }
 
-    return JsonResponse(response)
+    return make_success_json_response(200, response_body=response)
 
 @csrf_exempt
 @teacher_or_above
@@ -1423,7 +1423,7 @@ def schools(request):
             schools = [membership.school for membership in memberships]
             serializer = SchoolSerializer(schools, many=True)
             response = {"response": serializer.data}
-            return JsonResponse(response)
+            return make_success_json_response(200, response_body=response)
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
@@ -1475,7 +1475,7 @@ def school_detail(request, school_id):
         school = School.objects.get(id=school_id)
         serializer = SchoolSerializer(school)
         response = {"response": serializer.data}
-        return JsonResponse(response)
+        return make_success_json_response(200, response_body=response)
     except School.DoesNotExist:
         return make_error_json_response("School not found", 404)
     except Exception as e:
