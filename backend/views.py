@@ -1296,7 +1296,10 @@ def payments(request):
             if payment_date is None and payment_date_str:
                 return make_error_json_response("Invalid datetime format for payment date", 400)
 
-            if not isinstance(month, int) or not isinstance(year, int):
+            try:
+                month = int(month)
+                year = int(year)
+            except (ValueError, TypeError):
                 return make_error_json_response("Invalid date format for month or year", 400)
 
             if not (1 <= month <= 12):
