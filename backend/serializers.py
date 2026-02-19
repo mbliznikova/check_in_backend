@@ -41,8 +41,7 @@ class CaseSerializer(serializers.ModelSerializer):
                 result[key] = value
         return result
 
-    class Meta:
-        read_only_fields = ('school',)
+    school = serializers.PrimaryKeyRelatedField(read_only=True)
 
 class StudentSerializer(CaseSerializer):
     class Meta:
