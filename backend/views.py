@@ -706,6 +706,7 @@ def calculate_available_occurrence_time_intervals(occurrences, duration_to_fit, 
 
     return available_intervals
 
+@require_http_methods(["GET", "POST"])
 @csrf_exempt
 def students_view(request):
     if request.method == "GET":
@@ -713,9 +714,9 @@ def students_view(request):
     if request.method == "POST":
         return create_student(request)
 
+@require_http_methods(["GET"])
 @csrf_exempt
 @kiosk_or_above
-@require_http_methods(["GET"])
 def list_students(request):
     students = Student.objects.filter(
         school=request.school,
@@ -728,9 +729,9 @@ def list_students(request):
 
     return make_success_json_response(200, response_body=response)
 
+@require_http_methods(["POST"])
 @csrf_exempt
 @teacher_or_above
-@require_http_methods(["POST"])
 def create_student(request):
     try:
         request_body = json.loads(request.body)
@@ -862,9 +863,9 @@ def delete_student(request, student_id):
         except Exception as e:
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
-@kiosk_or_above
-@csrf_exempt
 @require_http_methods(["POST"])
+@csrf_exempt
+@kiosk_or_above
 def check_in(request):
     # For now this view serves for insertion and deletion entries to/from Attendance table since the data with classes
     # a student attends to arrives complete every time, like a source of truth
@@ -934,6 +935,7 @@ def check_in(request):
     except Exception as e:
         return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
+@require_http_methods(["GET"])
 @kiosk_or_above
 def get_attended_students(request):
     attended_today = Attendance.objects.filter(
@@ -1038,6 +1040,7 @@ def confirm(request):
     except Exception as e:
         return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
+@require_http_methods(["GET"])
 @teacher_or_above
 def attendance_list(request):
     request_month = request.GET.get("month")
@@ -1375,6 +1378,7 @@ def delete_payment(request, payment_id):
             return make_error_json_response(f"An unexpected error occurred: {e}", 500)
 
 
+@require_http_methods(["GET"])
 @teacher_or_above
 def payment_summary(request):
     # By default returns for the current month (for now)
@@ -1409,9 +1413,9 @@ def payment_summary(request):
     return make_success_json_response(200, response_body=response)
 
 
-# @any_authenticated_user
-@csrf_exempt
+@any_authenticated_user
 @require_http_methods(["GET", "POST"])
+@csrf_exempt
 def schools(request):
     """
     GET: List all schools the current user has membership in.
