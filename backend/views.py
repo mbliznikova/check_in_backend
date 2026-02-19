@@ -320,7 +320,7 @@ def delete_occurrence(request, occurrence_id):
 
            response = ClassModelSerializer.dict_to_camel_case(
                 {
-                    "message": f"Occurrence for {class_name} at {class_actual_date} {class_actual_time} was delete successfully", # TODO: fix typo
+                    "message": f"Occurrence for {class_name} at {class_actual_date} {class_actual_time} was deleted successfully",
                     "occurrence_id": occurrence_instance_id,
                 }
             )
@@ -416,7 +416,7 @@ def delete_class(request, class_id):
 
            response = ClassModelSerializer.dict_to_camel_case(
                 {
-                    "message": f"Class {class_instance_id} - {class_instance_name} was delete successfully",
+                    "message": f"Class {class_instance_id} - {class_instance_name} was deleted successfully",
                     "class_id": class_instance_id,
                     "class_name": class_instance_name,
                 }
@@ -445,7 +445,7 @@ def delete_schedule(request, schedule_id):
 
             response = ScheduleSerializer.dict_to_camel_case(
                 {
-                    "message": f"Schedule {schedule_instance_id} was delete successfully",
+                    "message": f"Schedule {schedule_instance_id} was deleted successfully",
                     "schedule_id": schedule_instance_id,
                 }
             )
