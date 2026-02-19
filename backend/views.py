@@ -759,7 +759,7 @@ def create_student(request):
         else:
             return make_error_json_response(serializer.errors, 400)
 
-        respone = StudentSerializer.dict_to_camel_case(
+        response = StudentSerializer.dict_to_camel_case(
             {
                 "message": "Student was created successfully",
                 "student_id": saved_student.id,
@@ -770,7 +770,7 @@ def create_student(request):
             }
         )
 
-        return make_success_json_response(200, response_body=respone)
+        return make_success_json_response(200, response_body=response)
 
     except json.JSONDecodeError:
         return make_error_json_response("Invalid JSON", 400)
