@@ -9,7 +9,14 @@ from django.views.decorators.http import require_http_methods
 
 from backend.models import ClassModel, ClassOccurrence, Day, Schedule
 from backend.serializers import CaseSerializer, ScheduleSerializer
-from backend.views.helpers import make_error_json_response, make_success_json_response
+from backend.views.helpers import (
+    DEFAULT_CLASS_DURATION_MINUTES,
+    DEFAULT_DAY_END_TIME,
+    DEFAULT_DAY_START_TIME,
+    DEFAULT_TIME_SLOT_STEP_MINUTES,
+    make_error_json_response,
+    make_success_json_response,
+)
 
 
 @teacher_or_above
@@ -51,7 +58,11 @@ def available_occurrence_time(request):
 
 
 def calculate_available_occurrence_time_intervals(occurrences, duration_to_fit, base_date,
-                                                  day_start="08:00", day_end="21:00"):
+                                                  day_start=None, day_end=None):
+    if day_start is None:
+        day_start = DEFAULT_DAY_START_TIME
+    if day_end is None:
+        day_end = DEFAULT_DAY_END_TIME
     available_intervals, taken_intervals = [], []
 
     dummy_day_start_class = datetime.combine(base_date, datetime.strptime(day_start, "%H:%M").time())
@@ -237,8 +248,14 @@ def available_time_slots(request):
     return make_success_json_response(200, response_body=response)
 
 
-def calculate_available_time_slots(schedules, duration_to_fit, step_minutes=30,
-                                   day_start="08:00", day_end="21:00"):
+def calculate_available_time_slots(schedules, duration_to_fit, step_minutes=None,
+                                   day_start=None, day_end=None):
+    if step_minutes is None:
+        step_minutes = DEFAULT_TIME_SLOT_STEP_MINUTES
+    if day_start is None:
+        day_start = DEFAULT_DAY_START_TIME
+    if day_end is None:
+        day_end = DEFAULT_DAY_END_TIME
     available_slots, taken_slots = [], []
     base_date = datetime.today().date()
 

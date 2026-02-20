@@ -9,7 +9,12 @@ from django.views.decorators.http import require_http_methods
 
 from backend.models import ClassModel, ClassOccurrence, Schedule
 from backend.serializers import ClassOccurrenceSerializer, ClassModelSerializer
-from backend.views.helpers import make_error_json_response, make_success_json_response
+from backend.views.helpers import (
+    DEFAULT_CLASS_DURATION_MINUTES,
+    DEFAULT_CLASS_NAME,
+    make_error_json_response,
+    make_success_json_response,
+)
 
 
 @kiosk_or_above
@@ -68,7 +73,7 @@ def class_occurrences(request):
                     return make_error_json_response(f"Schedule {schedule_id} not found.", 404)
 
             if not fallback_class_name and not class_model:
-                fallback_class_name = "No name class"
+                fallback_class_name = DEFAULT_CLASS_NAME
 
             data_to_write = {
                 "class_model": class_model.id if class_model else None,
@@ -78,8 +83,8 @@ def class_occurrences(request):
                 "actual_date": planned_date,
                 "planned_start_time": planned_start_time,
                 "actual_start_time": planned_start_time,
-                "planned_duration": planned_duration or 60,
-                "actual_duration": planned_duration or 60,
+                "planned_duration": planned_duration or DEFAULT_CLASS_DURATION_MINUTES,
+                "actual_duration": planned_duration or DEFAULT_CLASS_DURATION_MINUTES,
                 "notes": notes,
             }
 
