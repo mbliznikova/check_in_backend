@@ -111,7 +111,6 @@ class TimeSlotsTestCase(BaseTestCase):
         returned_slots = self.positive_response_content_helper(
             response, self.available_slots_day_two
         )
-        print(returned_slots)
 
         for slot in self.available_slots_day_two:
             self.assertIn(slot, returned_slots)

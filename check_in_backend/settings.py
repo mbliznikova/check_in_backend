@@ -172,5 +172,10 @@ LOGGING = {
             "level": "ERROR",
             "propagate": True,
         },
+        "backend": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
     },
 }

@@ -82,10 +82,6 @@ class CheckInTestCase(BaseTestCase):
             json.dumps(request_data),
             content_type="application/json",
         )
-        # Debug: print response content if not 200
-        if response.status_code != 200:
-            print("Response status:", response.status_code)
-            print("Response content:", response.content.decode())
         self.positive_response_helper(response, 200, "Check-in data was successfully updated")
         self.positive_response_content_helper(
             response=response, expected_checked_in_list=[self.occurrence_one.id]
