@@ -1,14 +1,11 @@
 """Tests for class and class occurrence functionality."""
 import json
-from datetime import time, datetime
+from datetime import time
 
-from django.test import TestCase
-from django.urls import reverse
 from django.db import IntegrityError, transaction
-from django.utils.dateparse import parse_time
-from django.utils.timezone import now
+from django.urls import reverse
 
-from ..models import ClassModel, Day, Schedule, ClassOccurrence
+from ..models import ClassModel, Day, Schedule
 from .test_utils import BaseTestCase
 
 
@@ -45,7 +42,8 @@ class ClassesTestCase(BaseTestCase):
             json.dumps(request_data),
             content_type="application/json",
         )
-        self.positive_response_helper(response, 200, "Class was created successfully")
+        self.positive_response_helper(
+            response, 200, "Class was created successfully")
         self.positive_response_content_helper(
             response=response, expected_class_name=self.class_one_name
         )
@@ -58,7 +56,8 @@ class ClassesTestCase(BaseTestCase):
             json.dumps(request_data),
             content_type="application/json",
         )
-        self.error_response_helper(response, 400, "Class name should not be empty")
+        self.error_response_helper(
+            response, 400, "Class name should not be empty")
 
 
 class SchedulesTestCase(BaseTestCase):
@@ -94,8 +93,10 @@ class SchedulesTestCase(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.schedules_url = reverse("schedules")
-        self.class_one = ClassModel.objects.create(name="Foil", school=self.school)
-        self.class_two = ClassModel.objects.create(name="Heavy sabre", school=self.school)
+        self.class_one = ClassModel.objects.create(
+            name="Foil", school=self.school)
+        self.class_two = ClassModel.objects.create(
+            name="Heavy sabre", school=self.school)
         self.day_one = Day.objects.create(name="Monday")
         self.day_two = Day.objects.create(name="Tuesday")
         self.time_one = "10:00:00"
@@ -114,7 +115,8 @@ class SchedulesTestCase(BaseTestCase):
             json.dumps(request_data),
             content_type="application/json",
         )
-        self.positive_response_helper(response, 200, "Schedule was created successfully")
+        self.positive_response_helper(
+            response, 200, "Schedule was created successfully")
         self.positive_response_content_helper(
             response=response,
             expected_class_id=self.class_one.id,
@@ -203,7 +205,8 @@ class SchedulesTestCase(BaseTestCase):
             json.dumps(request_data_one),
             content_type="application/json",
         )
-        self.positive_response_helper(response, 200, "Schedule was created successfully")
+        self.positive_response_helper(
+            response, 200, "Schedule was created successfully")
         self.positive_response_content_helper(
             response=response,
             expected_class_id=self.class_one.id,

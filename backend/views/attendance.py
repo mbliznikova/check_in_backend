@@ -1,17 +1,17 @@
 import json
 
-from datetime import date
-
-from backend.decorators import kiosk_or_above, teacher_or_above
-from django.db.models import Q
-from django.http import JsonResponse
 from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from backend.models import Attendance, Student, ClassOccurrence
-from backend.serializers import AttendanceSerializer, CaseSerializer, StudentSerializer
-from backend.views.helpers import make_error_json_response, make_success_json_response
+from backend.decorators import kiosk_or_above, teacher_or_above
+from backend.models import Attendance, Student
+from backend.serializers import (
+    AttendanceSerializer, CaseSerializer,
+)
+from backend.views.helpers import (
+    make_error_json_response, make_success_json_response,
+)
 
 
 @csrf_exempt
@@ -78,7 +78,7 @@ def check_in(request):
 
     except json.JSONDecodeError:
         return make_error_json_response("Invalid JSON", 400)
-    except Exception as e:
+    except Exception:
         return make_error_json_response("An internal error occurred", 500)
 
 
@@ -88,12 +88,14 @@ def get_attended_students(request):
         attendance_date=now().date(),
         school=request.school,
     )
-    student_occurrence_ids = attended_today.values_list("student_id", "class_occurrence", "class_name")
+    student_occurrence_ids = attended_today.values_list(
+        "student_id", "class_occurrence", "class_name")
 
     student_occurrence = {}
 
     for student_id, occurrence_id, class_name in student_occurrence_ids:
-        student_occurrence.setdefault(student_id, []).append([occurrence_id, class_name])
+        student_occurrence.setdefault(student_id, []).append(
+            [occurrence_id, class_name])
 
     students_attended_today_occ = Student.objects.filter(
         id__in=student_occurrence.keys(),
@@ -132,21 +134,22 @@ def confirm(request):
         )
 
         if not isinstance(confirmation_list, list):
-            return make_error_json_response("Invalid data format: 'confirmationList' should be a list", 400)
+            return make_error_json_response(
+                "Invalid data format: 'confirmationList' should be a list", 400)
 
         confirmed_attendance = {}
 
         for confirmation in confirmation_list:
             if not isinstance(confirmation, dict):
-                return make_error_json_response("Invalid data format: Each item in 'confirmationList' should be a dictionary", 400)
+                return make_error_json_response(
+                    "Invalid data format: Each item in 'confirmationList' should be a dictionary", 400)
             confirmed_attendance.update(confirmation)
 
         confirmed_attendance = {
             int(student_id_key): {
-                int(occurrence_id_key): bool(value) for occurrence_id_key, value in occurrences.items()
-            }
-            for student_id_key, occurrences in confirmed_attendance.items()
-        }
+                int(occurrence_id_key): bool(value) for occurrence_id_key,
+                value in occurrences.items()} for student_id_key,
+            occurrences in confirmed_attendance.items()}
 
         to_delete, to_update = [], []
 
@@ -154,11 +157,13 @@ def confirm(request):
             student_id = attendance.safe_student_id
             occurrence_id = attendance.safe_occurrence_id
 
-            if student_id not in confirmed_attendance or occurrence_id not in confirmed_attendance[student_id]:
+            if student_id not in confirmed_attendance or occurrence_id not in confirmed_attendance[
+                    student_id]:
                 to_delete.append(attendance.id)
                 continue
 
-            new_is_showed_up_value = confirmed_attendance.get(student_id, {}).get(occurrence_id)
+            new_is_showed_up_value = confirmed_attendance.get(
+                student_id, {}).get(occurrence_id)
 
             if attendance.is_showed_up != new_is_showed_up_value:
                 attendance.is_showed_up = new_is_showed_up_value
@@ -181,7 +186,7 @@ def confirm(request):
 
     except json.JSONDecodeError:
         return make_error_json_response("Invalid JSON", 400)
-    except Exception as e:
+    except Exception:
         return make_error_json_response("An internal error occurred", 500)
 
 
@@ -199,10 +204,12 @@ def attendance_list(request):
             request_year = int(request_year)
 
             if not (1 <= request_month <= 12):
-                return make_error_json_response(f"Month must be between 1 and 12, not {request_month}", 400)
+                return make_error_json_response(
+                    f"Month must be between 1 and 12, not {request_month}", 400)
 
             if not (2000 <= request_year <= now().year + 1):
-                return make_error_json_response(f"Invalid year: {request_year}", 400)
+                return make_error_json_response(
+                    f"Invalid year: {request_year}", 400)
 
             attendances = Attendance.objects.filter(
                 school=request.school,
@@ -227,7 +234,8 @@ def attendance_list(request):
         str_student_first_name = att.student_first_name or ""
         str_student_last_name = att.student_last_name or ""
         str_occurrence_id = str(att.safe_occurrence_id or "")
-        str_actual_time = str(att.class_occurrence.actual_start_time if att.class_occurrence else "")
+        str_actual_time = str(
+            att.class_occurrence.actual_start_time if att.class_occurrence else "")
 
         if str_date not in attendance_dict:
             attendance_dict[str_date] = {}
@@ -243,8 +251,7 @@ def attendance_list(request):
         attendance_dict[str_date][str_occurrence_id]["students"][str_student_id] = {
             "first_name": str_student_first_name,
             "last_name": str_student_last_name,
-            "is_showed_up": att.is_showed_up
-        }
+            "is_showed_up": att.is_showed_up}
 
     result_list_new = []
     for date, class_data in attendance_dict.items():

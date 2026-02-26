@@ -1,10 +1,11 @@
 """Shared test utilities and base classes for integration tests."""
 import json
-from django.test import TestCase
 from unittest.mock import patch
 
+from django.test import TestCase
+
+from backend.models import School, SchoolMembership, User
 from backend.services.user_sync import sync_clerk_user
-from backend.models import School, User, SchoolMembership
 
 FAKE_CLERK_PAYLOAD = {
     "sub": "clerk_test_user_123",

@@ -1,13 +1,12 @@
 import logging
-
 from datetime import date, timedelta
 
 from celery import shared_task
-from django.utils import timezone
 
-from .models import ClassOccurrence, Schedule, ClassModel, Day
+from .models import ClassOccurrence, Schedule
 
 logger = logging.getLogger(__name__)
+
 
 @shared_task
 def create_class_occurrences():
@@ -20,7 +19,8 @@ def create_class_occurrences():
     days_until_next_monday = (8 - today.isoweekday()) % 7
     next_monday_date = today + timedelta(days=days_until_next_monday)
 
-    logger.info(f"Creating class occurrence. The next Mondays will be {next_monday_date}")
+    logger.info(
+        f"Creating class occurrence. The next Mondays will be {next_monday_date}")
 
     weekday_map = {
         "monday": 1,
@@ -32,7 +32,8 @@ def create_class_occurrences():
         "sunday": 7,
     }
 
-    schedules = Schedule.objects.select_related("class_model", "day", "school").all()
+    schedules = Schedule.objects.select_related(
+        "class_model", "day", "school").all()
 
     occurrences_to_create = []
 
@@ -47,7 +48,10 @@ def create_class_occurrences():
         ).exists()
 
         if exist:
-            logger.debug(f"Skipping scheduling class {schedule.class_model} for {occurrence_date} {schedule.class_time} because of duplication.")
+            logger.debug(
+                f"Skipping scheduling class {
+                    schedule.class_model} for {occurrence_date} {
+                    schedule.class_time} because of duplication.")
             continue
 
         occurrence = ClassOccurrence(
@@ -66,10 +70,10 @@ def create_class_occurrences():
 
         occurrences_to_create.append(occurrence)
 
-    
     if occurrences_to_create:
         ClassOccurrence.objects.bulk_create(occurrences_to_create)
-        logger.info(f"Created {len(occurrences_to_create)} new class occurrences.")
+        logger.info(
+            f"Created {
+                len(occurrences_to_create)} new class occurrences.")
     else:
         logger.info("No new class occurrences to create")
-

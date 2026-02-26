@@ -1,13 +1,14 @@
 import json
 
-from backend.decorators import kiosk_or_above, teacher_or_above
-from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from backend.decorators import kiosk_or_above, teacher_or_above
 from backend.models import Student
 from backend.serializers import StudentSerializer
-from backend.views.helpers import make_error_json_response, make_success_json_response
+from backend.views.helpers import (
+    make_error_json_response, make_success_json_response,
+)
 
 
 @csrf_exempt
@@ -47,7 +48,8 @@ def create_student(request):
         emergency_contacts = request_body.get("emergencyContacts")
 
         if not first_name or not last_name:
-            return make_error_json_response("First and last name should not be empty", 400)
+            return make_error_json_response(
+                "First and last name should not be empty", 400)
 
         data_to_write = {
             "first_name": first_name,
@@ -79,7 +81,7 @@ def create_student(request):
 
     except json.JSONDecodeError:
         return make_error_json_response("Invalid JSON", 400)
-    except Exception as e:
+    except Exception:
         return make_error_json_response("An internal error occurred", 500)
 
 
@@ -102,12 +104,14 @@ def edit_student(request, student_id):
 
             if first_name is not None:
                 if not first_name.strip():
-                    return make_error_json_response("First name cannot be empty", 400)
+                    return make_error_json_response(
+                        "First name cannot be empty", 400)
                 student_instance.first_name = first_name
 
             if last_name is not None:
                 if not last_name.strip():
-                    return make_error_json_response("Last name cannot be empty", 400)
+                    return make_error_json_response(
+                        "Last name cannot be empty", 400)
                 student_instance.last_name = last_name
 
             if is_liability_form_sent is not None:
@@ -133,7 +137,7 @@ def edit_student(request, student_id):
             return make_error_json_response("Student not found", 404)
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
-        except Exception as e:
+        except Exception:
             return make_error_json_response("An internal error occurred", 500)
 
 
@@ -160,5 +164,5 @@ def delete_student(request, student_id):
 
         except Student.DoesNotExist:
             return make_error_json_response("Student not found", 404)
-        except Exception as e:
+        except Exception:
             return make_error_json_response("An internal error occurred", 500)

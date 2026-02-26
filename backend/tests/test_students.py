@@ -1,10 +1,8 @@
 """Tests for student functionality."""
 import json
 
-from django.test import TestCase
 from django.urls import reverse
 
-from ..models import Student
 from .test_utils import BaseTestCase
 
 
@@ -47,7 +45,8 @@ class StudentsTestCase(BaseTestCase):
             json.dumps(request_data),
             content_type="application/json",
         )
-        self.positive_response_helper(response, 200, "Student was created successfully")
+        self.positive_response_helper(
+            response, 200, "Student was created successfully")
         self.positive_response_content_helper(
             response=response,
             expected_first_name=self.first_name_one,
@@ -87,4 +86,5 @@ class StudentsTestCase(BaseTestCase):
         )
 
 
-# TODO: Add tests for updating and deleting students (PUT/PATCH /students/<id>/ and DELETE)
+# TODO: Add tests for updating and deleting students (PUT/PATCH
+# /students/<id>/ and DELETE)

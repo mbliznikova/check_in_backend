@@ -2,11 +2,10 @@
 import json
 from datetime import time
 
-from django.test import TestCase
 from django.urls import reverse
 from django.utils.timezone import now
 
-from ..models import ClassModel, Student, Attendance, ClassOccurrence
+from ..models import Attendance, ClassModel, ClassOccurrence, Student
 from .test_utils import BaseTestCase
 
 
@@ -14,8 +13,10 @@ class CheckInTestCase(BaseTestCase):
     """Tests for the check-in endpoint (POST /check_in/)."""
 
     def positive_response_content_helper(
-        self, response, expected_checked_in_list=None, expected_checked_out_list=None
-    ):
+            self,
+            response,
+            expected_checked_in_list=None,
+            expected_checked_out_list=None):
         """Assert response contains correct student ID, attendance date, and checked in/out lists."""
         response_data = json.loads(response.content)
         self.assertIn("studentId", response_data)
@@ -25,12 +26,16 @@ class CheckInTestCase(BaseTestCase):
 
         if expected_checked_in_list:
             self.assertIn("checkedIn", response_data)
-            self.assertEqual(len(response_data.get("checkedIn")), len(expected_checked_in_list))
-            self.assertEqual(set(response_data.get("checkedIn")), set(expected_checked_in_list))
+            self.assertEqual(len(response_data.get("checkedIn")),
+                             len(expected_checked_in_list))
+            self.assertEqual(set(response_data.get("checkedIn")),
+                             set(expected_checked_in_list))
         if expected_checked_out_list:
             self.assertIn("checkedOut", response_data)
-            self.assertEqual(len(response_data.get("checkedOut")), len(expected_checked_out_list))
-            self.assertEqual(set(response_data.get("checkedOut")), set(expected_checked_out_list))
+            self.assertEqual(len(response_data.get("checkedOut")),
+                             len(expected_checked_out_list))
+            self.assertEqual(set(response_data.get("checkedOut")),
+                             set(expected_checked_out_list))
 
     def setUp(self):
         super().setUp()
@@ -39,8 +44,10 @@ class CheckInTestCase(BaseTestCase):
         self.test_student = Student.objects.create(
             first_name="John", last_name="Testovich", school=self.school
         )
-        self.class_one = ClassModel.objects.create(name="Foil", school=self.school)
-        self.class_two = ClassModel.objects.create(name="Heavy sabre", school=self.school)
+        self.class_one = ClassModel.objects.create(
+            name="Foil", school=self.school)
+        self.class_two = ClassModel.objects.create(
+            name="Heavy sabre", school=self.school)
 
         # Use date object for occurrences
         self.today_date = now().date()
@@ -82,10 +89,11 @@ class CheckInTestCase(BaseTestCase):
             json.dumps(request_data),
             content_type="application/json",
         )
-        self.positive_response_helper(response, 200, "Check-in data was successfully updated")
+        self.positive_response_helper(
+            response, 200, "Check-in data was successfully updated")
         self.positive_response_content_helper(
-            response=response, expected_checked_in_list=[self.occurrence_one.id]
-        )
+            response=response, expected_checked_in_list=[
+                self.occurrence_one.id])
 
         attendance_record = Attendance.objects.filter(
             student_id=self.test_student, attendance_date=self.today
@@ -96,20 +104,22 @@ class CheckInTestCase(BaseTestCase):
         request_data = {
             "checkInData": {
                 "studentId": self.test_student.id,
-                "classOccurrencesList": [self.occurrence_one.id, self.occurrence_two.id],
+                "classOccurrencesList": [
+                    self.occurrence_one.id,
+                    self.occurrence_two.id],
                 "todayDate": self.today,
-            }
-        }
+            }}
 
         response = self.client.post(
             self.check_in_url,
             json.dumps(request_data),
             content_type="application/json",
         )
-        self.positive_response_helper(response, 200, "Check-in data was successfully updated")
+        self.positive_response_helper(
+            response, 200, "Check-in data was successfully updated")
         self.positive_response_content_helper(
-            response=response, expected_checked_in_list=[self.occurrence_one.id, self.occurrence_two.id]
-        )
+            response=response, expected_checked_in_list=[
+                self.occurrence_one.id, self.occurrence_two.id])
 
         attendance_record = Attendance.objects.filter(
             student_id=self.test_student, attendance_date=self.today
@@ -141,15 +151,18 @@ class CheckInTestCase(BaseTestCase):
             json.dumps(request_data),
             content_type="application/json",
         )
-        self.positive_response_helper(response, 200, "Check-in data was successfully updated")
+        self.positive_response_helper(
+            response, 200, "Check-in data was successfully updated")
         self.positive_response_content_helper(
-            response=response, expected_checked_out_list=[self.occurrence_one.id]
-        )
+            response=response, expected_checked_out_list=[
+                self.occurrence_one.id])
 
         attendance_final_record = list(
-            Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
-            .values_list("class_occurrence", flat=True)
-        )
+            Attendance.objects.filter(
+                student_id=self.test_student,
+                attendance_date=self.today) .values_list(
+                "class_occurrence",
+                flat=True))
         self.assertEqual(len(attendance_final_record), 0)
 
     def test_student_checks_in_one_class_checks_out_another_class(self):
@@ -160,9 +173,11 @@ class CheckInTestCase(BaseTestCase):
             school=self.school,
         )
         attendance_initial_record = list(
-            Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
-            .values_list("class_occurrence", flat=True)
-        )
+            Attendance.objects.filter(
+                student_id=self.test_student,
+                attendance_date=self.today) .values_list(
+                "class_occurrence",
+                flat=True))
         self.assertEqual(len(attendance_initial_record), 1)
         self.assertEqual(attendance_initial_record[0], self.occurrence_one.id)
 
@@ -179,7 +194,8 @@ class CheckInTestCase(BaseTestCase):
             json.dumps(request_data),
             content_type="application/json",
         )
-        self.positive_response_helper(response, 200, "Check-in data was successfully updated")
+        self.positive_response_helper(
+            response, 200, "Check-in data was successfully updated")
         self.positive_response_content_helper(
             response=response,
             expected_checked_in_list=[self.occurrence_two.id],
@@ -187,9 +203,11 @@ class CheckInTestCase(BaseTestCase):
         )
 
         attendance_final_record = list(
-            Attendance.objects.filter(student_id=self.test_student, attendance_date=self.today)
-            .values_list("class_occurrence", flat=True)
-        )
+            Attendance.objects.filter(
+                student_id=self.test_student,
+                attendance_date=self.today) .values_list(
+                "class_occurrence",
+                flat=True))
         self.assertEqual(len(attendance_final_record), 1)
         self.assertEqual(attendance_final_record[0], self.occurrence_two.id)
 
@@ -214,8 +232,9 @@ class CheckInTestCase(BaseTestCase):
 
     def test_invalid_json(self):
         response = self.client.post(
-            self.check_in_url, data="invalid JSON", content_type="application/json"
-        )
+            self.check_in_url,
+            data="invalid JSON",
+            content_type="application/json")
         self.assertEqual(response.status_code, 400)
 
         response_data = json.loads(response.content)

@@ -1,6 +1,6 @@
 """Tests for price management functionality."""
 import json
-from django.test import TestCase
+
 from .test_utils import BaseTestCase
 
 

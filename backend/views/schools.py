@@ -1,13 +1,15 @@
 import json
 
-from backend.decorators import admin_or_owner, any_authenticated_user
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from backend.decorators import admin_or_owner, any_authenticated_user
 from backend.models import School, SchoolMembership
 from backend.serializers import SchoolSerializer
-from backend.views.helpers import make_error_json_response, make_success_json_response
+from backend.views.helpers import (
+    make_error_json_response, make_success_json_response,
+)
 
 
 @any_authenticated_user
@@ -16,14 +18,15 @@ from backend.views.helpers import make_error_json_response, make_success_json_re
 def schools(request):
     if request.method == "GET":
         try:
-            memberships = SchoolMembership.objects.filter(user=request.user).select_related('school')
+            memberships = SchoolMembership.objects.filter(
+                user=request.user).select_related('school')
             schools_list = [membership.school for membership in memberships]
             serializer = SchoolSerializer(schools_list, many=True)
             response = {
                 "response": serializer.data
             }
             return JsonResponse(response)
-        except Exception as e:
+        except Exception:
             return make_error_json_response("An internal error occurred", 500)
 
     elif request.method == "POST":
@@ -36,10 +39,12 @@ def schools(request):
             logo_url = request_body.get("logoUrl", "")
 
             if not name or not clerk_org_id:
-                return make_error_json_response("Name and clerkOrgId are required", 400)
+                return make_error_json_response(
+                    "Name and clerkOrgId are required", 400)
 
             if School.objects.filter(clerk_org_id=clerk_org_id).exists():
-                return make_error_json_response("School with this clerk organization ID already exists", 400)
+                return make_error_json_response(
+                    "School with this clerk organization ID already exists", 400)
 
             school = School.objects.create(
                 name=name,
@@ -64,7 +69,7 @@ def schools(request):
 
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
-        except Exception as e:
+        except Exception:
             return make_error_json_response("An internal error occurred", 500)
 
 
@@ -81,7 +86,7 @@ def school_detail(request, school_id):
         return JsonResponse(response)
     except School.DoesNotExist:
         return make_error_json_response("School not found", 404)
-    except Exception as e:
+    except Exception:
         return make_error_json_response("An internal error occurred", 500)
 
 
@@ -101,7 +106,8 @@ def edit_school(request, school_id):
         data_to_write = {}
         if name is not None:
             if not name.strip():
-                return make_error_json_response("School name cannot be empty", 400)
+                return make_error_json_response(
+                    "School name cannot be empty", 400)
             data_to_write["name"] = name
         if phone is not None:
             data_to_write["phone"] = phone
@@ -130,7 +136,7 @@ def edit_school(request, school_id):
         return make_error_json_response("School not found", 404)
     except json.JSONDecodeError:
         return make_error_json_response("Invalid JSON", 400)
-    except Exception as e:
+    except Exception:
         return make_error_json_response("An internal error occurred", 500)
 
 
@@ -153,5 +159,5 @@ def delete_school(request, school_id):
 
     except School.DoesNotExist:
         return make_error_json_response("School not found", 404)
-    except Exception as e:
+    except Exception:
         return make_error_json_response("An internal error occurred", 500)

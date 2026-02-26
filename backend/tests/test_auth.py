@@ -2,11 +2,10 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.test import TestCase
 
-from unittest.mock import patch
-
 from backend.services.user_sync import sync_clerk_user
 
 User = get_user_model()
+
 
 class SyncClerkUserTests(TestCase):
 

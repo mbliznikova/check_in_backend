@@ -1,19 +1,16 @@
 import json
 
-from backend.decorators import kiosk_or_above, teacher_or_above
 from django.db.models import Q
-from django.http import JsonResponse
 from django.utils.dateparse import parse_date, parse_time
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from backend.decorators import kiosk_or_above, teacher_or_above
 from backend.models import ClassModel, ClassOccurrence, Schedule
-from backend.serializers import ClassOccurrenceSerializer, ClassModelSerializer
+from backend.serializers import ClassModelSerializer, ClassOccurrenceSerializer
 from backend.views.helpers import (
-    DEFAULT_CLASS_DURATION_MINUTES,
-    DEFAULT_CLASS_NAME,
-    make_error_json_response,
-    make_success_json_response,
+    DEFAULT_CLASS_DURATION_MINUTES, DEFAULT_CLASS_NAME,
+    make_error_json_response, make_success_json_response,
 )
 
 
@@ -53,7 +50,8 @@ def class_occurrences(request):
             notes = request_body.get("notes", "")
 
             if not planned_date_str or not planned_start_time_str:
-                return make_error_json_response("plannedDate and plannedStartTime are required.", 400)
+                return make_error_json_response(
+                    "plannedDate and plannedStartTime are required.", 400)
 
             planned_date = parse_date(planned_date_str)
             planned_start_time = parse_time(planned_start_time_str)
@@ -64,13 +62,16 @@ def class_occurrences(request):
 
             class_model, schedule = None, None
             if class_model_id:
-                class_model = ClassModel.objects.filter(id=class_model_id).first()
+                class_model = ClassModel.objects.filter(
+                    id=class_model_id).first()
                 if class_model is None:
-                    return make_error_json_response(f"ClassModel {class_model_id} not found.", 404)
+                    return make_error_json_response(
+                        f"ClassModel {class_model_id} not found.", 404)
             if schedule_id:
                 schedule = Schedule.objects.filter(id=schedule_id).first()
                 if schedule is None:
-                    return make_error_json_response(f"Schedule {schedule_id} not found.", 404)
+                    return make_error_json_response(
+                        f"Schedule {schedule_id} not found.", 404)
 
             if not fallback_class_name and not class_model:
                 fallback_class_name = DEFAULT_CLASS_NAME
@@ -109,7 +110,7 @@ def class_occurrences(request):
 
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
-        except Exception as e:
+        except Exception:
             return make_error_json_response("An internal error occurred", 500)
 
 
@@ -136,14 +137,16 @@ def edit_occurrence(request, occurrence_id):
             if actual_date_str is not None:
                 actual_date = parse_date(actual_date_str)
                 if not actual_date:
-                    return make_error_json_response(f"Invalid date format: {actual_date_str}", 400)
+                    return make_error_json_response(
+                        f"Invalid date format: {actual_date_str}", 400)
 
                 data_to_write["actual_date"] = actual_date
 
             if actual_start_time_str is not None:
                 actual_start_time = parse_time(actual_start_time_str)
                 if not actual_start_time:
-                    return make_error_json_response(f"Invalid time format: {actual_start_time_str}", 400)
+                    return make_error_json_response(
+                        f"Invalid time format: {actual_start_time_str}", 400)
 
                 data_to_write["actual_start_time"] = actual_start_time
 
@@ -151,7 +154,8 @@ def edit_occurrence(request, occurrence_id):
                 try:
                     actual_duration = int(actual_duration_str)
                 except ValueError as e:
-                    return make_error_json_response(f"Invalid minutes value: {actual_duration_str}. Can not convert to int: {e}", 400)
+                    return make_error_json_response(
+                        f"Invalid minutes value: {actual_duration_str}. Can not convert to int: {e}", 400)
 
                 data_to_write["actual_duration"] = actual_duration
 
@@ -161,7 +165,8 @@ def edit_occurrence(request, occurrence_id):
             if notes is not None:
                 data_to_write["notes"] = notes
 
-            serializer = ClassOccurrenceSerializer(occurrence_instance, data=data_to_write, partial=True)
+            serializer = ClassOccurrenceSerializer(
+                occurrence_instance, data=data_to_write, partial=True)
             if serializer.is_valid():
                 serializer.save(school=request.school)
             else:
@@ -179,7 +184,7 @@ def edit_occurrence(request, occurrence_id):
             return make_error_json_response("Class occurrence not found", 404)
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
-        except Exception as e:
+        except Exception:
             return make_error_json_response("An internal error occurred", 500)
 
 
@@ -209,7 +214,7 @@ def delete_occurrence(request, occurrence_id):
 
         except ClassOccurrence.DoesNotExist:
             return make_error_json_response("Class Occurrence not found", 404)
-        except Exception as e:
+        except Exception:
             return make_error_json_response("An internal error occurred", 500)
 
 
