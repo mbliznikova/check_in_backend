@@ -102,18 +102,18 @@ def get_attended_students(request):
         school=request.school,
     )
 
-    response = {
+    response = CaseSerializer.dict_to_camel_case({
         "confirmed_attendance": [
-            {
+            CaseSerializer.dict_to_camel_case({
                 "id": student.id,
                 "first_name": student.first_name,
                 "last_name": student.last_name,
                 "classes": [occ[-1] for occ in student_occurrence.get(student.id, [])],
                 "occurrences": [occ[0] for occ in student_occurrence.get(student.id, [])],
-            }
+            })
             for student in students_attended_today_occ
         ]
-    }
+    })
 
     return make_success_json_response(200, response_body=response)
 
@@ -241,17 +241,22 @@ def attendance_list(request):
             attendance_dict[str_date] = {}
 
         if str_occurrence_id not in attendance_dict[str_date]:
-            attendance_dict[str_date][str_occurrence_id] = {
-                "name": str_class_name,
-                "time": str_actual_time,
-                "class_id": str_class_id,
-                "students": {},
-            }
+            attendance_dict[str_date][str_occurrence_id] = (
+                CaseSerializer.dict_to_camel_case({
+                    "name": str_class_name,
+                    "time": str_actual_time,
+                    "class_id": str_class_id,
+                    "students": {},
+                })
+            )
 
-        attendance_dict[str_date][str_occurrence_id]["students"][str_student_id] = {
-            "first_name": str_student_first_name,
-            "last_name": str_student_last_name,
-            "is_showed_up": att.is_showed_up}
+        attendance_dict[str_date][str_occurrence_id]["students"][str_student_id] = (
+            CaseSerializer.dict_to_camel_case({
+                "first_name": str_student_first_name,
+                "last_name": str_student_last_name,
+                "is_showed_up": att.is_showed_up
+            })
+        )
 
     result_list_new = []
     for date, class_data in attendance_dict.items():
