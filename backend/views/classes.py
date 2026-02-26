@@ -1,17 +1,15 @@
 import json
-
 from datetime import datetime
 
-from backend.decorators import teacher_or_above
-from django.db.models import Q, Sum
-from django.http import JsonResponse
-from django.utils.dateparse import parse_date, parse_time
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from backend.decorators import teacher_or_above
 from backend.models import ClassModel, Day, Schedule
 from backend.serializers import ClassModelSerializer
-from backend.views.helpers import make_error_json_response, make_success_json_response
+from backend.views.helpers import (
+    make_error_json_response, make_success_json_response,
+)
 
 
 @teacher_or_above
@@ -36,7 +34,8 @@ def classes(request):
             is_recurring = request_body.get("isRecurring")
 
             if not name:
-                return make_error_json_response("Class name should not be empty", 400)
+                return make_error_json_response(
+                    "Class name should not be empty", 400)
 
             data_to_write = {
                 "name": name
@@ -66,7 +65,7 @@ def classes(request):
 
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
-        except Exception as e:
+        except Exception:
             return make_error_json_response("An internal error occurred", 500)
 
 
@@ -88,7 +87,8 @@ def edit_class(request, class_id):
 
             if class_name is not None:
                 if not class_name.strip():
-                    return make_error_json_response("Class name cannot be empty", 400)
+                    return make_error_json_response(
+                        "Class name cannot be empty", 400)
                 class_instance.name = class_name
 
             if duration_minutes is not None:
@@ -113,7 +113,7 @@ def edit_class(request, class_id):
             return make_error_json_response("Class not found", 404)
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
-        except Exception as e:
+        except Exception:
             return make_error_json_response("An internal error occurred", 500)
 
 
@@ -142,7 +142,7 @@ def delete_class(request, class_id):
 
         except ClassModel.DoesNotExist:
             return make_error_json_response("Class not found", 404)
-        except Exception as e:
+        except Exception:
             return make_error_json_response("An internal error occurred", 500)
 
 

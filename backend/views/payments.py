@@ -1,16 +1,17 @@
 import json
 
-from backend.decorators import teacher_or_above
-from django.http import JsonResponse
-from django.utils.dateparse import parse_datetime, parse_date, parse_time
 from django.db.models import Sum
-from django.utils.timezone import now, is_naive, make_aware
+from django.utils.dateparse import parse_datetime
+from django.utils.timezone import is_naive, make_aware, now
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from backend.decorators import teacher_or_above
 from backend.models import ClassModel, Payment, Price, Student
 from backend.serializers import PaymentSerializer, PriceSerializer
-from backend.views.helpers import make_error_json_response, make_success_json_response
+from backend.views.helpers import (
+    make_error_json_response, make_success_json_response,
+)
 
 
 @teacher_or_above
@@ -56,13 +57,15 @@ def prices(request):
                     school=request.school,
                 )
             except Exception:
-                return make_error_json_response(f"Class {class_id} does not exist", 400)
+                return make_error_json_response(
+                    f"Class {class_id} does not exist", 400)
 
             if Price.objects.filter(
                 class_id=class_instance,
                 school=request.school,
             ).exists():
-                return make_error_json_response(f"Price already exists for class {class_id}", 400)
+                return make_error_json_response(
+                    f"Price already exists for class {class_id}", 400)
 
             data_to_write = {
                 "class_id": class_instance.pk,
@@ -107,7 +110,8 @@ def edit_price(request, price_id):
             if amount is not None:
                 data_to_write["amount"] = amount
 
-            serializer = PriceSerializer(price, data=data_to_write, partial=True)
+            serializer = PriceSerializer(
+                price, data=data_to_write, partial=True)
             if serializer.is_valid():
                 serializer.save(school=request.school)
             else:
@@ -169,7 +173,8 @@ def payments(request):
                 month = int(month)
                 year = int(year)
             except (ValueError, TypeError):
-                return make_error_json_response("Invalid date format for month or year", 400)
+                return make_error_json_response(
+                    "Invalid date format for month or year", 400)
 
             if not student_name:
                 try:
@@ -191,13 +196,16 @@ def payments(request):
                 except ClassModel.DoesNotExist:
                     return make_error_json_response("Class not found", 404)
 
-            payment_date = parse_datetime(payment_date_str) if payment_date_str else None
+            payment_date = parse_datetime(
+                payment_date_str) if payment_date_str else None
 
             if payment_date is None and payment_date_str:
-                return make_error_json_response("Invalid datetime format for payment date", 400)
+                return make_error_json_response(
+                    "Invalid datetime format for payment date", 400)
 
             if not (1 <= month <= 12):
-                return make_error_json_response("Invalid value for month: should be between 1 and 12", 400)
+                return make_error_json_response(
+                    "Invalid value for month: should be between 1 and 12", 400)
 
             if payment_date and is_naive(payment_date):
                 payment_date = make_aware(payment_date)
@@ -265,7 +273,7 @@ def delete_payment(request, payment_id):
 
     except Payment.DoesNotExist:
         return make_error_json_response("Payment not found", 404)
-    except Exception as e:
+    except Exception:
         return make_error_json_response("An internal error occurred", 500)
 
 
@@ -280,7 +288,8 @@ def payment_summary(request):
         payment_month=payment_month_param,
     )
 
-    new_summary = payment_summary.aggregate(Sum("amount"))["amount__sum"] or 0.0
+    new_summary = payment_summary.aggregate(
+        Sum("amount"))["amount__sum"] or 0.0
 
     response = {
         "summary": new_summary

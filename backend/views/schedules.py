@@ -1,16 +1,14 @@
 import json
 from datetime import datetime, timedelta
 
-from backend.decorators import teacher_or_above
-from django.http import JsonResponse
 from django.utils.dateparse import parse_date, parse_time
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from backend.decorators import teacher_or_above
 from backend.models import ClassModel, ClassOccurrence, Day, Schedule
 from backend.serializers import CaseSerializer, ScheduleSerializer
 from backend.views.helpers import (
-    DEFAULT_CLASS_DURATION_MINUTES,
     DEFAULT_DAY_END_TIME,
     DEFAULT_DAY_START_TIME,
     DEFAULT_TIME_SLOT_STEP_MINUTES,
@@ -38,7 +36,8 @@ def available_occurrence_time(request):
     try:
         duration_minutes = int(duration_minutes_param)
         if duration_minutes <= 0:
-            return make_error_json_response("Class duration must be positive", 400)
+            return make_error_json_response(
+                "Class duration must be positive", 400)
     except ValueError:
         return make_error_json_response("Invalid duration_minutes format", 400)
 
@@ -47,7 +46,8 @@ def available_occurrence_time(request):
         school=request.school,
     )
 
-    available_slots = calculate_available_occurrence_time_intervals(occurrences, duration_minutes, parsed_date)
+    available_slots = calculate_available_occurrence_time_intervals(
+        occurrences, duration_minutes, parsed_date)
 
     response = CaseSerializer.dict_to_camel_case({
         "message": "Available time intervals for class occurrence",
@@ -57,28 +57,40 @@ def available_occurrence_time(request):
     return make_success_json_response(200, response_body=response)
 
 
-def calculate_available_occurrence_time_intervals(occurrences, duration_to_fit, base_date,
-                                                  day_start=None, day_end=None):
+def calculate_available_occurrence_time_intervals(
+        occurrences,
+        duration_to_fit,
+        base_date,
+        day_start=None,
+        day_end=None):
     if day_start is None:
         day_start = DEFAULT_DAY_START_TIME
     if day_end is None:
         day_end = DEFAULT_DAY_END_TIME
     available_intervals, taken_intervals = [], []
 
-    dummy_day_start_class = datetime.combine(base_date, datetime.strptime(day_start, "%H:%M").time())
-    dummy_day_end_class = datetime.combine(base_date, datetime.strptime(day_end, "%H:%M").time())
-    taken_intervals.append({"start_time": dummy_day_start_class, "end_time": dummy_day_start_class})
+    dummy_day_start_class = datetime.combine(
+        base_date, datetime.strptime(
+            day_start, "%H:%M").time())
+    dummy_day_end_class = datetime.combine(
+        base_date, datetime.strptime(
+            day_end, "%H:%M").time())
+    taken_intervals.append(
+        {"start_time": dummy_day_start_class, "end_time": dummy_day_start_class})
 
     for occurrence in occurrences:
         start_time = datetime.combine(base_date, occurrence.actual_start_time)
         class_duration = occurrence.actual_duration
         end_time = start_time + timedelta(minutes=class_duration)
-        taken_intervals.append({"start_time": start_time, "end_time": end_time})
+        taken_intervals.append(
+            {"start_time": start_time, "end_time": end_time})
 
-        last_occurrence_start = datetime.combine(base_date, occurrence.actual_start_time)
+        last_occurrence_start = datetime.combine(
+            base_date, occurrence.actual_start_time)
         dummy_day_end_class = last_occurrence_start if last_occurrence_start > dummy_day_end_class else dummy_day_end_class
 
-    taken_intervals.append({"start_time": dummy_day_end_class, "end_time": dummy_day_end_class})
+    taken_intervals.append(
+        {"start_time": dummy_day_end_class, "end_time": dummy_day_end_class})
 
     len_taken_intervals = len(taken_intervals)
 
@@ -95,7 +107,8 @@ def calculate_available_occurrence_time_intervals(occurrences, duration_to_fit, 
             continue
         else:
             duration = timedelta(minutes=duration_to_fit)
-            available_intervals.append([window_start.time().strftime("%H:%M"), (window_end - duration).time().strftime("%H:%M")])
+            available_intervals.append([window_start.time().strftime(
+                "%H:%M"), (window_end - duration).time().strftime("%H:%M")])
 
     return available_intervals
 
@@ -123,7 +136,7 @@ def delete_schedule(request, schedule_id):
 
         except Schedule.DoesNotExist:
             return make_error_json_response("Schedule not found", 404)
-        except Exception as e:
+        except Exception:
             return make_error_json_response("An internal error occurred", 500)
 
 
@@ -205,7 +218,7 @@ def schedules(request):
 
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
-        except Exception as e:
+        except Exception:
             return make_error_json_response("An internal error occurred", 500)
 
 
@@ -224,7 +237,8 @@ def available_time_slots(request):
     try:
         duration_minutes = int(duration_minutes_param)
         if duration_minutes <= 0:
-            return make_error_json_response("Class duration must be positive", 400)
+            return make_error_json_response(
+                "Class duration must be positive", 400)
     except ValueError:
         return make_error_json_response("Invalid duration_minutes format", 400)
 
@@ -238,7 +252,8 @@ def available_time_slots(request):
         school=request.school,
     )
 
-    available_slots = calculate_available_time_slots(schedules, duration_minutes)
+    available_slots = calculate_available_time_slots(
+        schedules, duration_minutes)
 
     response = CaseSerializer.dict_to_camel_case({
         "message": "Available time slots",
@@ -248,8 +263,12 @@ def available_time_slots(request):
     return make_success_json_response(200, response_body=response)
 
 
-def calculate_available_time_slots(schedules, duration_to_fit, step_minutes=None,
-                                   day_start=None, day_end=None):
+def calculate_available_time_slots(
+        schedules,
+        duration_to_fit,
+        step_minutes=None,
+        day_start=None,
+        day_end=None):
     if step_minutes is None:
         step_minutes = DEFAULT_TIME_SLOT_STEP_MINUTES
     if day_start is None:
@@ -259,9 +278,14 @@ def calculate_available_time_slots(schedules, duration_to_fit, step_minutes=None
     available_slots, taken_slots = [], []
     base_date = datetime.today().date()
 
-    dummy_day_start_class = datetime.combine(base_date, datetime.strptime(day_start, "%H:%M").time())
-    dummy_day_end_class = datetime.combine(base_date, datetime.strptime(day_end, "%H:%M").time())
-    taken_slots.append({"start_time": dummy_day_start_class, "end_time": dummy_day_start_class})
+    dummy_day_start_class = datetime.combine(
+        base_date, datetime.strptime(
+            day_start, "%H:%M").time())
+    dummy_day_end_class = datetime.combine(
+        base_date, datetime.strptime(
+            day_end, "%H:%M").time())
+    taken_slots.append({"start_time": dummy_day_start_class,
+                       "end_time": dummy_day_start_class})
 
     for schedule in schedules:
         start_time = datetime.combine(base_date, schedule.class_time)
@@ -269,7 +293,8 @@ def calculate_available_time_slots(schedules, duration_to_fit, step_minutes=None
         end_time = start_time + timedelta(minutes=class_duration)
         taken_slots.append({"start_time": start_time, "end_time": end_time})
 
-    taken_slots.append({"start_time": dummy_day_end_class, "end_time": dummy_day_end_class})
+    taken_slots.append({"start_time": dummy_day_end_class,
+                       "end_time": dummy_day_end_class})
 
     len_taken_slots = len(taken_slots)
 
@@ -290,7 +315,8 @@ def calculate_available_time_slots(schedules, duration_to_fit, step_minutes=None
             candidate_start = window_start
 
             while candidate_start + duration <= window_end:
-                available_slots.append(candidate_start.time().strftime("%H:%M"))
+                available_slots.append(
+                    candidate_start.time().strftime("%H:%M"))
                 candidate_start += step
 
     return available_slots

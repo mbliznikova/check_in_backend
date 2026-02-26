@@ -1,18 +1,18 @@
-import os
-import jwt
 import logging
 
-from django.utils.functional import SimpleLazyObject
+import jwt
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied
+from django.utils.functional import SimpleLazyObject
 
-from .models import School, SchoolMembership
+from .models import SchoolMembership
 from .services import user_sync, verify_token
 
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
+
 
 def get_clerk_user(request):
     auth_header = request.headers.get("Authorization")
@@ -47,12 +47,14 @@ def get_clerk_user(request):
         logger.warning(f"Invalid token: {e}")
         return AnonymousUser()
 
-    except Exception as e:
+    except Exception:
         logger.exception(f"Unexpected Clerk auth error: {e}")
         return AnonymousUser()
 
+
 # Paths that do not require school membership validation
 EXEMPT_PATHS = {"/backend/me/", "/backend/schools/"}
+
 
 class ClerkAuthenticationMiddleware:
     """
@@ -62,6 +64,7 @@ class ClerkAuthenticationMiddleware:
     - Resolves school
     - Attaches request.user, request.school, request.role and request.membership
     """
+
     def __init__(self, get_response):
         self.get_response = get_response
 

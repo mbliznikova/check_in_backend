@@ -2,11 +2,10 @@
 import json
 from datetime import datetime
 
-from django.test import TestCase
 from django.urls import reverse
 from django.utils.timezone import now
 
-from ..models import Student, ClassModel, Payment
+from ..models import ClassModel, Payment, Student
 from .test_utils import BaseTestCase
 
 
@@ -28,7 +27,9 @@ class PaymentTestCase(BaseTestCase):
     def additional_positive_response_content_helper(self, response_data):
         """Assert additional fields in successful payment response."""
         self.assertIn("studentName", response_data)
-        student_name = f"{self.test_student.first_name} {self.test_student.last_name}"
+        student_name = f"{
+            self.test_student.first_name} {
+            self.test_student.last_name}"
         self.assertEqual(response_data.get("studentName"), student_name)
 
         self.assertIn("className", response_data)
@@ -56,13 +57,15 @@ class PaymentTestCase(BaseTestCase):
             json.dumps(request_data),
             content_type="application/json",
         )
-        self.positive_response_helper(response, 200, "Payment was successfully created")
+        self.positive_response_helper(
+            response, 200, "Payment was successfully created")
 
         response_data = self.get_response_data_helper(response)
         self.base_positive_response_content_helper(response_data)
         self.additional_positive_response_content_helper(response_data)
 
-        payment_record_id = Payment.objects.get(id=response_data.get("paymentId"))
+        payment_record_id = Payment.objects.get(
+            id=response_data.get("paymentId"))
         self.assertEqual(payment_record_id.id, response_data.get("paymentId"))
 
     def base_negative_validation_invalid_request_fields(
@@ -89,12 +92,18 @@ class PaymentTestCase(BaseTestCase):
         self.test_student = Student.objects.create(
             first_name="John", last_name="Testovich", school=self.school
         )
-        self.class_one = ClassModel.objects.create(name="Foil", school=self.school)
+        self.class_one = ClassModel.objects.create(
+            name="Foil", school=self.school)
 
         # Django may internally convert isoformat string back into a naive datetime if it's missing timezone info
-        # To be safe, it's better to store the actual aware datetime object, not the string
-        self.today = now()  # have an object, not str, with timezone included, convert to string later
-        self.today_naive = datetime.now()  # have a naive object, without timezone included, convert to string later
+        # To be safe, it's better to store the actual aware datetime object,
+        # not the string
+        # have an object, not str, with timezone included, convert to string
+        # later
+        self.today = now()
+        # have a naive object, without timezone included, convert to string
+        # later
+        self.today_naive = datetime.now()
 
     def test_successful_payment_made(self):
         request_data = {
@@ -280,8 +289,7 @@ class PaymentTestCase(BaseTestCase):
         }
 
         self.base_negative_validation_invalid_request_fields(
-            request_data, 400, "Invalid value for month: should be between 1 and 12"
-        )
+            request_data, 400, "Invalid value for month: should be between 1 and 12")
 
     def test_retrieving_payments_from_another_month(self):
         another_payment_month = 6

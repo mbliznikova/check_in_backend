@@ -1,9 +1,9 @@
-from django.http import JsonResponse
-
 from backend.decorators import any_authenticated_user
 from backend.models import SchoolMembership
 from backend.serializers import CaseSerializer
-from backend.views.helpers import make_error_json_response, make_success_json_response
+from backend.views.helpers import (
+    make_success_json_response,
+)
 
 
 @any_authenticated_user

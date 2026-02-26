@@ -1,12 +1,11 @@
 """Tests for school management functionality."""
 import json
 
-from django.test import TestCase
-from django.urls import reverse
 from django.contrib.auth import get_user_model
+from django.urls import reverse
 
 from ..models import School, SchoolMembership
-from .test_utils import BaseTestCase, FAKE_CLERK_PAYLOAD
+from .test_utils import FAKE_CLERK_PAYLOAD, BaseTestCase
 
 User = get_user_model()
 
@@ -31,9 +30,11 @@ class SchoolsTestCase(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.schools_url = reverse("schools")
-        self.school_detail_url = reverse("school_detail", args=[self.school.id])
+        self.school_detail_url = reverse(
+            "school_detail", args=[self.school.id])
         self.edit_school_url = reverse("edit_school", args=[self.school.id])
-        self.delete_school_url = reverse("delete_school", args=[self.school.id])
+        self.delete_school_url = reverse(
+            "delete_school", args=[self.school.id])
 
     def test_get_schools_list_successfully(self):
         response = self.client.get(self.schools_url)
@@ -42,10 +43,13 @@ class SchoolsTestCase(BaseTestCase):
         self.assertIn("response", response_data)
         self.assertEqual(len(response_data["response"]), 1)
         self.assertEqual(response_data["response"][0]["id"], self.school.id)
-        self.assertEqual(response_data["response"][0]["name"], self.school.name)
+        self.assertEqual(
+            response_data["response"][0]["name"],
+            self.school.name)
 
     def test_get_schools_empty_list(self):
-        # Delete the membership created in setUp to simulate a user with no school memberships
+        # Delete the membership created in setUp to simulate a user with no
+        # school memberships
         self.membership.delete()
         response = self.client.get(self.schools_url)
         self.assertEqual(response.status_code, 200)
@@ -69,7 +73,9 @@ class SchoolsTestCase(BaseTestCase):
         self.assertEqual(response.status_code, 201)
         response_data = json.loads(response.content)
         self.assertIn("message", response_data)
-        self.assertEqual(response_data["message"], "School created successfully")
+        self.assertEqual(
+            response_data["message"],
+            "School created successfully")
         self.assertEqual(response_data["name"], "New School")
         self.assertEqual(response_data["clerkOrgId"], "new_org_456")
 
@@ -93,8 +99,7 @@ class SchoolsTestCase(BaseTestCase):
             content_type="application/json",
         )
         self.error_response_helper(
-            response, 400, "School with this clerk organization ID already exists"
-        )
+            response, 400, "School with this clerk organization ID already exists")
 
     def test_create_school_missing_required_fields(self):
         request_data = {"name": "Incomplete School"}
@@ -103,7 +108,8 @@ class SchoolsTestCase(BaseTestCase):
             json.dumps(request_data),
             content_type="application/json",
         )
-        self.error_response_helper(response, 400, "Name and clerkOrgId are required")
+        self.error_response_helper(
+            response, 400, "Name and clerkOrgId are required")
 
     def test_get_school_detail_successfully(self):
         response = self.client.get(self.school_detail_url)
@@ -126,7 +132,8 @@ class SchoolsTestCase(BaseTestCase):
             json.dumps(request_data),
             content_type="application/json",
         )
-        self.positive_response_helper(response, 200, "School was updated successfully")
+        self.positive_response_helper(
+            response, 200, "School was updated successfully")
         response_data = json.loads(response.content)
         self.assertEqual(response_data["name"], "Updated School Name")
         self.assertEqual(response_data["phone"], "+1234567890")
@@ -138,13 +145,14 @@ class SchoolsTestCase(BaseTestCase):
             json.dumps(request_data),
             content_type="application/json",
         )
-        self.error_response_helper(response, 400, "School name cannot be empty")
+        self.error_response_helper(
+            response, 400, "School name cannot be empty")
 
     def test_delete_school_successfully(self):
         response = self.client.delete(self.delete_school_url)
         self.positive_response_helper(
-            response, 200, f"School {self.school.name} was deleted successfully"
-        )
+            response, 200, f"School {
+                self.school.name} was deleted successfully")
         self.assertFalse(School.objects.filter(id=self.school.id).exists())
 
     def test_delete_school_not_found(self):

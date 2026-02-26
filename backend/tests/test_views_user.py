@@ -1,6 +1,6 @@
 """Tests for user-related views (get_user, today_classes_list, etc.)."""
 import json
-from django.test import TestCase
+
 from .test_utils import BaseTestCase
 
 

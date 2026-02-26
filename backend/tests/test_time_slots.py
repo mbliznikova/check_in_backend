@@ -1,11 +1,8 @@
 """Tests for available time slots calculation."""
 import json
-from datetime import time
 
-from django.test import TestCase
 from django.urls import reverse
 from django.utils.dateparse import parse_time
-from django.utils.timezone import now
 
 from ..models import ClassModel, Day, Schedule
 from .test_utils import BaseTestCase
@@ -93,8 +90,8 @@ class TimeSlotsTestCase(BaseTestCase):
 
     def test_empty_day_has_all_available_intervals(self):
         response = self.client.get(
-            self.slots_url, {"day": self.day_one_name, "duration": self.new_class_duration}
-        )
+            self.slots_url, {
+                "day": self.day_one_name, "duration": self.new_class_duration})
         self.positive_response_helper(response, 200, "Available time slots")
         returned_slots = self.positive_response_content_helper(
             response, self.available_slots_day_one
@@ -105,8 +102,8 @@ class TimeSlotsTestCase(BaseTestCase):
 
     def test_busy_day_only_available_intervals(self):
         response = self.client.get(
-            self.slots_url, {"day": self.day_two_name, "duration": self.new_class_duration}
-        )
+            self.slots_url, {
+                "day": self.day_two_name, "duration": self.new_class_duration})
         self.positive_response_helper(response, 200, "Available time slots")
         returned_slots = self.positive_response_content_helper(
             response, self.available_slots_day_two

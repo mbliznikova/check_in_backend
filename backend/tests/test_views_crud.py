@@ -1,10 +1,12 @@
 """Tests for edit/delete operations across models."""
 import json
 from datetime import time
-from django.test import TestCase
+
 from django.utils.timezone import now
 
-from ..models import Student, ClassModel, ClassOccurrence, Day, Schedule, Payment
+from ..models import (
+    ClassModel, ClassOccurrence, Day, Payment, Schedule, Student,
+)
 from .test_utils import BaseTestCase
 
 
@@ -28,7 +30,8 @@ class ClassCRUDTestCase(BaseTestCase):
 
     def setUp(self):
         super().setUp()
-        self.class_obj = ClassModel.objects.create(name="Test Class", school=self.school)
+        self.class_obj = ClassModel.objects.create(
+            name="Test Class", school=self.school)
         self.class_detail_url = f"/api/classes/{self.class_obj.id}/"
 
     # TODO: Add tests for PATCH /classes/<id>/
@@ -41,7 +44,8 @@ class ClassOccurrenceCRUDTestCase(BaseTestCase):
 
     def setUp(self):
         super().setUp()
-        self.class_model = ClassModel.objects.create(name="Test Class", school=self.school)
+        self.class_model = ClassModel.objects.create(
+            name="Test Class", school=self.school)
         self.occurrence = ClassOccurrence.objects.create(
             school=self.school,
             class_model=self.class_model,
@@ -52,7 +56,8 @@ class ClassOccurrenceCRUDTestCase(BaseTestCase):
             planned_duration=60,
             actual_duration=60,
         )
-        self.occurrence_detail_url = f"/api/class_occurrences/{self.occurrence.id}/"
+        self.occurrence_detail_url = f"/api/class_occurrences/{
+            self.occurrence.id}/"
 
     # TODO: Add tests for PUT/PATCH /class_occurrences/<id>/
     # TODO: Add tests for DELETE /class_occurrences/<id>/
@@ -64,7 +69,8 @@ class ScheduleCRUDTestCase(BaseTestCase):
 
     def setUp(self):
         super().setUp()
-        self.class_model = ClassModel.objects.create(name="Test Class", school=self.school)
+        self.class_model = ClassModel.objects.create(
+            name="Test Class", school=self.school)
         self.day = Day.objects.create(name="Monday")
         self.schedule = Schedule.objects.create(
             class_model=self.class_model,
@@ -86,7 +92,8 @@ class PaymentCRUDTestCase(BaseTestCase):
         self.student = Student.objects.create(
             first_name="John", last_name="Doe", school=self.school
         )
-        self.class_model = ClassModel.objects.create(name="Test Class", school=self.school)
+        self.class_model = ClassModel.objects.create(
+            name="Test Class", school=self.school)
         self.payment = Payment.objects.create(
             student_id=self.student,
             class_occurrence=None,  # or create a class occurrence
