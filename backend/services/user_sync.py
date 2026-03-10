@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
+
 def sync_clerk_user(clerk_user_id, user_email, extra_fields):
     if not clerk_user_id or not user_email:
         return AnonymousUser()
@@ -27,6 +28,6 @@ def sync_clerk_user(clerk_user_id, user_email, extra_fields):
 
         return user
 
-    except Exception as e:
+    except Exception:
         logger.exception(f"Failed to sync Clerk user: {e}")
         return AnonymousUser()

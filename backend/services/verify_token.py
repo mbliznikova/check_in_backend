@@ -1,7 +1,7 @@
-import os
-import jwt
 import logging
+import os
 
+import jwt
 from dotenv import load_dotenv
 from jwt import PyJWKClient
 
@@ -14,6 +14,7 @@ CLERK_AUDIENCE = os.environ.get("CLERK_AUDIENCE")
 CLERK_JWKS_URL = os.environ.get("CLERK_JWKS_URL")
 
 jwks_client = PyJWKClient(CLERK_JWKS_URL)
+
 
 def verify_clerk_token(jwt_token):
     try:
@@ -30,6 +31,6 @@ def verify_clerk_token(jwt_token):
 
         return decoded_token
 
-    except Exception as e:
+    except Exception:
         logger.exception(f"Token verification failed: {e}")
         return None
