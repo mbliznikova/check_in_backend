@@ -62,7 +62,7 @@ def schools(request):
 
             serializer = SchoolSerializer(school)
             response = {
-                "message": "School created successfully",
+                "message": "School was created successfully",
                 **serializer.data
             }
             return make_success_json_response(201, response_body=response)
