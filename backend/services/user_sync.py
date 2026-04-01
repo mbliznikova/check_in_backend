@@ -13,7 +13,7 @@ def sync_clerk_user(clerk_user_id, user_email, extra_fields):
     if not clerk_user_id or not user_email:
         return AnonymousUser()
 
-    extra_fields = extra_fields or {}
+    extra_fields = {k: v for k, v in (extra_fields or {}).items() if v is not None}
 
     try:
         with transaction.atomic():
@@ -28,6 +28,6 @@ def sync_clerk_user(clerk_user_id, user_email, extra_fields):
 
         return user
 
-    except Exception:
-        logger.exception(f"Failed to sync Clerk user: {e}")
+    except Exception as e:
+        logger.exception("Failed to sync Clerk user clerk_user_id=%s: %s", clerk_user_id, e)
         return AnonymousUser()
