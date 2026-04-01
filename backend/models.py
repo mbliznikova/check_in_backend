@@ -52,6 +52,20 @@ class SchoolMembership(models.Model):
     class Meta:
         unique_together = ("user", "school")
 
+class Invitation(models.Model):
+    school = models.ForeignKey(School, on_delete=models.CASCADE)
+    email = models.EmailField()
+    role = models.CharField(max_length=50, choices=SchoolMembership.ROLE_CHOICES)
+    invited_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    accepted = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    def is_valid(self):
+        return not self.accepted and now() < self.expires_at
+
+    def __str__(self):
+        return f"{self.email} -> {self.school.name} ({self.role})"
 
 class Student(models.Model):
     id = models.AutoField(primary_key=True)

@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from .models import (
     Attendance, ClassModel, ClassOccurrence, Day, MonthlyPaymentsSummary,
-    Payment, Price, Schedule, School, Student,
+    Payment, Price, Schedule, School, Student, Invitation,
 )
 
 
@@ -111,3 +111,8 @@ class SchoolSerializer(CaseSerializer):
     class Meta:
         model = School
         fields = '__all__'
+
+class InvitationSerializer(CaseSerializer):
+    class Meta:
+        model = Invitation
+        fields = "__all__"

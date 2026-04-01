@@ -47,8 +47,8 @@ def get_clerk_user(request):
         logger.warning(f"Invalid token: {e}")
         return AnonymousUser()
 
-    except Exception:
-        logger.exception(f"Unexpected Clerk auth error: {e}")
+    except Exception as e:
+        logger.exception("Unexpected Clerk auth error: %s", e)
         return AnonymousUser()
 
 
@@ -74,9 +74,13 @@ class ClerkAuthenticationMiddleware:
 
         request.user = SimpleLazyObject(lambda: get_clerk_user(request))
 
+        if request.path.startswith("/backend/invitations/") and request.path.endswith("/accept/"):
+            return self.get_response(request)
+
         if request.path in EXEMPT_PATHS:
             return self.get_response(request)
 
+        # TODO: revisit
         if not request.user or request.user.is_anonymous:
             return self.get_response(request)
 

@@ -23,6 +23,10 @@ from backend.views.students import (
     create_student, delete_student, edit_student, list_students, students_view,
 )
 
+from backend.views.invitations import (
+    create_invitation, accept_invitation,
+)
+
 __all__ = [
     "get_user",
     "classes",
@@ -54,4 +58,6 @@ __all__ = [
     "school_detail",
     "edit_school",
     "delete_school",
+    "create_invitation",
+    "accept_invitation",
 ]
