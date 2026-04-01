@@ -27,6 +27,10 @@ from backend.views.invitations import (
     create_invitation, accept_invitation,
 )
 
+from backend.views.memberships import (
+    list_memberships, edit_membership, delete_membership,
+)
+
 __all__ = [
     "get_user",
     "classes",
@@ -60,4 +64,7 @@ __all__ = [
     "delete_school",
     "create_invitation",
     "accept_invitation",
+    "list_memberships",
+    "edit_membership",
+    "delete_membership",
 ]

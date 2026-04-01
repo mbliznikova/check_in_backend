@@ -8,7 +8,7 @@ from .views import (
     get_attended_students, get_user, payment_summary, payments,
     prices, schedules, school_detail, schools, students_view,
     today_class_occurrences, today_classes_list, create_invitation,
-    accept_invitation,
+    accept_invitation, list_memberships, edit_membership, delete_membership,
 )
 
 urlpatterns = [
@@ -42,4 +42,7 @@ urlpatterns = [
     path("schools/<int:school_id>/delete/", delete_school, name="delete_school"),
     path("invitations/", create_invitation, name="create_invitation"),
     path("invitations/<int:invitation_id>/accept/", accept_invitation, name="accept_invitation"),
+    path("memberships/", list_memberships, name="list_memberships"),
+    path("memberships/<int:membership_id>/edit/", edit_membership, name="edit_membership"),
+    path("memberships/<int:membership_id>/delete/", delete_membership, name="delete_membership"),
 ]
