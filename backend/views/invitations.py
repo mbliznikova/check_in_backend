@@ -48,10 +48,18 @@ def create_invitation(request):
                 "User is already a member of this school", 400
             )
 
+        Invitation.objects.filter(
+            school=request.school,
+            email__iexact=email,
+            accepted=False,
+            expires_at__lte=now()
+        ).delete()
+
         if Invitation.objects.filter(
             school=request.school,
             email__iexact=email,
-            accepted=False
+            accepted=False,
+            expires_at__gt=now()
         ).exists():
             logger.info("create_invitation: active invitation already exists for email=%s school=%s", email, request.school.id)
             return make_error_json_response(
