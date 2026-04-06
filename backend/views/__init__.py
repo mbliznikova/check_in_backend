@@ -14,7 +14,7 @@ from backend.views.payments import (
     delete_payment, edit_price, payment_summary, payments, prices,
 )
 from backend.views.schedules import (
-    available_time_slots, delete_schedule, schedules,
+    available_occurrence_time, available_time_slots, delete_schedule, schedules,
 )
 from backend.views.schools import (
     delete_school, edit_school, school_detail, schools,
@@ -43,6 +43,7 @@ __all__ = [
     "delete_occurrence",
     "schedules",
     "delete_schedule",
+    "available_occurrence_time",
     "available_time_slots",
     "students_view",
     "list_students",

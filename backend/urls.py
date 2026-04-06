@@ -9,6 +9,7 @@ from .views import (
     prices, schedules, school_detail, schools, students_view,
     today_class_occurrences, today_classes_list, create_invitation,
     accept_invitation, list_memberships, edit_membership, delete_membership,
+    available_occurrence_time,
 )
 
 urlpatterns = [
@@ -35,6 +36,7 @@ urlpatterns = [
     path("schedules/", schedules, name="schedules"),
     path("schedules/<int:schedule_id>/delete/", delete_schedule, name="delete_schedule"),
     path("available_time_slots/", available_time_slots, name="available_time_slots"),
+    path("available_occurrence_time/", available_occurrence_time, name="available_occurrence_time"),
     path("me/", get_user, name="get_user"),
     path("schools/", schools, name="schools"),
     path("schools/<int:school_id>/", school_detail, name="school_detail"),
