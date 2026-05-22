@@ -8,16 +8,21 @@ celery>=5.3,<6.0
 redis>=5.0,<6.0
 
 # Authentication & Security
-PyJWT>=2.8,<3.0
-PyJWKClient>=1.5,<2.0
+PyJWT>=2.8,<3.0  # PyJWKClient is a class inside PyJWT, not a separate package
 
 # Environment Variables
 python-dotenv>=1.0,<2.0
 
-# Database (for production)
-# psycopg2-binary>=2.9,<3.0
+# Database
+psycopg2-binary>=2.9,<3.0
 
-# Development Dependencies
+# Production server
+gunicorn>=21.0,<22.0
+
+# Error tracking
+sentry-sdk[django]>=1.40,<2.0
+
+# Development/testing
 pytest>=7.4,<8.0
 pytest-django>=4.5,<5.0
 coverage>=7.3,<8.0
