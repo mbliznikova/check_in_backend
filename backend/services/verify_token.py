@@ -31,6 +31,6 @@ def verify_clerk_token(jwt_token):
 
         return decoded_token
 
-    except Exception:
+    except Exception as e:
         logger.exception(f"Token verification failed: {e}")
         return None
