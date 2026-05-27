@@ -10,9 +10,16 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
-from corsheaders.defaults import default_headers
-from celery.schedules import crontab
+import logging
+import os
 from pathlib import Path
+
+import sentry_sdk
+from celery.schedules import crontab
+from corsheaders.defaults import default_headers
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -152,6 +159,14 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(hour=0, minute=0, day_of_week='sunday'),
     },
 }
+
+# ── Error tracking (Sentry) ───────────────────────────────────────────────────
+
+_sentry_dsn = os.environ.get("SENTRY_DSN")
+if _sentry_dsn:
+    sentry_sdk.init(dsn=_sentry_dsn, traces_sample_rate=0.1)
+else:
+    logging.warning("SENTRY_DSN is not set; error tracking is disabled.")
 
 LOGGING = {
     "version": 1,

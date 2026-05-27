@@ -20,7 +20,7 @@ psycopg2-binary>=2.9,<3.0
 gunicorn>=21.0,<22.0
 
 # Error tracking
-sentry-sdk[django]>=1.40,<2.0
+sentry-sdk[django]>=2.0,<3.0
 
 # Development/testing
 pytest>=7.4,<8.0
