@@ -1,6 +1,9 @@
 import json
+import logging
 
 from django.views.decorators.csrf import csrf_exempt
+
+logger = logging.getLogger(__name__)
 from django.views.decorators.http import require_http_methods
 
 from backend.decorators import kiosk_or_above, teacher_or_above
@@ -81,7 +84,8 @@ def create_student(request):
 
     except json.JSONDecodeError:
         return make_error_json_response("Invalid JSON", 400)
-    except Exception:
+    except Exception as e:
+        logger.exception(f"Unexpected error in create_student: {e}")
         return make_error_json_response("An internal error occurred", 500)
 
 
@@ -137,7 +141,8 @@ def edit_student(request, student_id):
             return make_error_json_response("Student not found", 404)
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
-        except Exception:
+        except Exception as e:
+            logger.exception(f"Unexpected error in edit_student (id={student_id}): {e}")
             return make_error_json_response("An internal error occurred", 500)
 
 
@@ -164,5 +169,6 @@ def delete_student(request, student_id):
 
         except Student.DoesNotExist:
             return make_error_json_response("Student not found", 404)
-        except Exception:
+        except Exception as e:
+            logger.exception(f"Unexpected error in delete_student (id={student_id}): {e}")
             return make_error_json_response("An internal error occurred", 500)
