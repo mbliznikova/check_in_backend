@@ -7,6 +7,8 @@ from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from django_ratelimit.decorators import ratelimit
+
 from backend.decorators import admin_or_owner, any_authenticated_user
 from backend.models import Invitation, SchoolMembership
 from backend.serializers import CaseSerializer, InvitationSerializer
@@ -17,9 +19,12 @@ from backend.views.helpers import (
 logger = logging.getLogger(__name__)
 
 @admin_or_owner
+@ratelimit(key='user', rate='10/m', method='POST', block=False)
 @csrf_exempt
 @require_http_methods(["POST"])
 def create_invitation(request):
+    if getattr(request, 'limited', False):
+        return make_error_json_response("Too many requests", 429)
     logger.info(
         "create_invitation called by user=%s school=%s",
         request.user.id, getattr(request.school, "id", None)
@@ -95,10 +100,13 @@ def create_invitation(request):
         logger.exception("create_invitation: unexpected error for user=%s school=%s", request.user.id, getattr(request.school, "id", None))
         return make_error_json_response("An internal error occurred", 500)
 
+@ratelimit(key='ip', rate='5/m', method='POST', block=False)
 @any_authenticated_user
 @csrf_exempt
 @require_http_methods(["POST"])
 def accept_invitation(request, invitation_id):
+    if getattr(request, 'limited', False):
+        return make_error_json_response("Too many requests", 429)
     logger.info("accept_invitation called by user=%s invitation_id=%s", request.user.id, invitation_id)
     try:
         invitation = Invitation.objects.select_related("school").get(id=invitation_id)
