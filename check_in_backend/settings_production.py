@@ -8,8 +8,11 @@ All base settings are inherited from settings.py. Only production-specific
 values are defined here.
 """
 
+import logging
 import os
+from pathlib import Path
 
+import sentry_sdk
 from dotenv import load_dotenv
 
 from check_in_backend.settings import *  # noqa: F401, F403
@@ -53,7 +56,6 @@ DATABASES = {
 # collectstatic dumps files to staticfiles/; serve that directory via your
 # platform's static hosting or a CDN. Django admin CSS/JS needs this.
 
-from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
@@ -78,13 +80,11 @@ CSRF_COOKIE_SECURE = True
 
 # ── Error tracking (Sentry) ───────────────────────────────────────────────────
 
-try:
-    import sentry_sdk
-    _sentry_dsn = os.environ.get("SENTRY_DSN")
-    if _sentry_dsn:
-        sentry_sdk.init(dsn=_sentry_dsn, traces_sample_rate=0.1)
-except ImportError:
-    pass
+_sentry_dsn = os.environ.get("SENTRY_DSN")
+if _sentry_dsn:
+    sentry_sdk.init(dsn=_sentry_dsn, traces_sample_rate=0.1)
+else:
+    logging.warning("SENTRY_DSN is not set; error tracking is disabled.")
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 # Capture WARNING+ to file; keep console for platform log aggregators.
