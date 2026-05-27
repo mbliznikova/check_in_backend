@@ -1,6 +1,9 @@
 import json
+import logging
 
 from django.db.models import Q
+
+logger = logging.getLogger(__name__)
 from django.utils.dateparse import parse_date, parse_time
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -110,7 +113,8 @@ def class_occurrences(request):
 
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
-        except Exception:
+        except Exception as e:
+            logger.exception(f"Unexpected error in class_occurrences POST: {e}")
             return make_error_json_response("An internal error occurred", 500)
 
 
@@ -184,7 +188,8 @@ def edit_occurrence(request, occurrence_id):
             return make_error_json_response("Class occurrence not found", 404)
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
-        except Exception:
+        except Exception as e:
+            logger.exception(f"Unexpected error in edit_occurrence (id={occurrence_id}): {e}")
             return make_error_json_response("An internal error occurred", 500)
 
 
@@ -214,7 +219,8 @@ def delete_occurrence(request, occurrence_id):
 
         except ClassOccurrence.DoesNotExist:
             return make_error_json_response("Class Occurrence not found", 404)
-        except Exception:
+        except Exception as e:
+            logger.exception(f"Unexpected error in delete_occurrence (id={occurrence_id}): {e}")
             return make_error_json_response("An internal error occurred", 500)
 
 

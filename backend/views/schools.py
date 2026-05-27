@@ -1,6 +1,9 @@
 import json
+import logging
 
 from django.http import JsonResponse
+
+logger = logging.getLogger(__name__)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
@@ -26,7 +29,8 @@ def schools(request):
                 "response": serializer.data
             }
             return JsonResponse(response)
-        except Exception:
+        except Exception as e:
+            logger.exception(f"Unexpected error in schools GET: {e}")
             return make_error_json_response("An internal error occurred", 500)
 
     elif request.method == "POST":
@@ -69,7 +73,8 @@ def schools(request):
 
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
-        except Exception:
+        except Exception as e:
+            logger.exception(f"Unexpected error in schools POST: {e}")
             return make_error_json_response("An internal error occurred", 500)
 
 
@@ -86,7 +91,8 @@ def school_detail(request, school_id):
         return JsonResponse(response)
     except School.DoesNotExist:
         return make_error_json_response("School not found", 404)
-    except Exception:
+    except Exception as e:
+        logger.exception(f"Unexpected error in school_detail (id={school_id}): {e}")
         return make_error_json_response("An internal error occurred", 500)
 
 
@@ -136,7 +142,8 @@ def edit_school(request, school_id):
         return make_error_json_response("School not found", 404)
     except json.JSONDecodeError:
         return make_error_json_response("Invalid JSON", 400)
-    except Exception:
+    except Exception as e:
+        logger.exception(f"Unexpected error in edit_school (id={school_id}): {e}")
         return make_error_json_response("An internal error occurred", 500)
 
 
@@ -159,5 +166,6 @@ def delete_school(request, school_id):
 
     except School.DoesNotExist:
         return make_error_json_response("School not found", 404)
-    except Exception:
+    except Exception as e:
+        logger.exception(f"Unexpected error in delete_school (id={school_id}): {e}")
         return make_error_json_response("An internal error occurred", 500)

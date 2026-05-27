@@ -1,6 +1,9 @@
 import json
+import logging
 
 from django.db.models import Sum
+
+logger = logging.getLogger(__name__)
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import is_naive, make_aware, now
 from django.views.decorators.csrf import csrf_exempt
@@ -56,7 +59,8 @@ def prices(request):
                     id=class_id,
                     school=request.school,
                 )
-            except Exception:
+            except Exception as e:
+                logger.exception(f"Unexpected error fetching class (id={class_id}) in prices POST: {e}")
                 return make_error_json_response(
                     f"Class {class_id} does not exist", 400)
 
@@ -273,7 +277,8 @@ def delete_payment(request, payment_id):
 
     except Payment.DoesNotExist:
         return make_error_json_response("Payment not found", 404)
-    except Exception:
+    except Exception as e:
+        logger.exception(f"Unexpected error in delete_payment (id={payment_id}): {e}")
         return make_error_json_response("An internal error occurred", 500)
 
 

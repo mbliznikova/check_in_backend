@@ -1,7 +1,10 @@
 import json
+import logging
 from datetime import datetime
 
 from django.views.decorators.csrf import csrf_exempt
+
+logger = logging.getLogger(__name__)
 from django.views.decorators.http import require_http_methods
 
 from backend.decorators import teacher_or_above
@@ -65,7 +68,8 @@ def classes(request):
 
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
-        except Exception:
+        except Exception as e:
+            logger.exception(f"Unexpected error in classes POST: {e}")
             return make_error_json_response("An internal error occurred", 500)
 
 
@@ -113,7 +117,8 @@ def edit_class(request, class_id):
             return make_error_json_response("Class not found", 404)
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
-        except Exception:
+        except Exception as e:
+            logger.exception(f"Unexpected error in edit_class (id={class_id}): {e}")
             return make_error_json_response("An internal error occurred", 500)
 
 
@@ -142,7 +147,8 @@ def delete_class(request, class_id):
 
         except ClassModel.DoesNotExist:
             return make_error_json_response("Class not found", 404)
-        except Exception:
+        except Exception as e:
+            logger.exception(f"Unexpected error in delete_class (id={class_id}): {e}")
             return make_error_json_response("An internal error occurred", 500)
 
 

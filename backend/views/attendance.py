@@ -1,6 +1,9 @@
 import json
+import logging
 
 from django.utils.timezone import now
+
+logger = logging.getLogger(__name__)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
@@ -78,7 +81,8 @@ def check_in(request):
 
     except json.JSONDecodeError:
         return make_error_json_response("Invalid JSON", 400)
-    except Exception:
+    except Exception as e:
+        logger.exception(f"Unexpected error in check_in: {e}")
         return make_error_json_response("An internal error occurred", 500)
 
 
@@ -186,7 +190,8 @@ def confirm(request):
 
     except json.JSONDecodeError:
         return make_error_json_response("Invalid JSON", 400)
-    except Exception:
+    except Exception as e:
+        logger.exception(f"Unexpected error in confirm: {e}")
         return make_error_json_response("An internal error occurred", 500)
 
 

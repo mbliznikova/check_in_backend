@@ -1,7 +1,10 @@
 import json
+import logging
 from datetime import datetime, timedelta
 
 from django.utils.dateparse import parse_date, parse_time
+
+logger = logging.getLogger(__name__)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
@@ -136,7 +139,8 @@ def delete_schedule(request, schedule_id):
 
         except Schedule.DoesNotExist:
             return make_error_json_response("Schedule not found", 404)
-        except Exception:
+        except Exception as e:
+            logger.exception(f"Unexpected error in delete_schedule (id={schedule_id}): {e}")
             return make_error_json_response("An internal error occurred", 500)
 
 
@@ -218,7 +222,8 @@ def schedules(request):
 
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
-        except Exception:
+        except Exception as e:
+            logger.exception(f"Unexpected error in schedules POST: {e}")
             return make_error_json_response("An internal error occurred", 500)
 
 
@@ -244,7 +249,8 @@ def available_time_slots(request):
 
     try:
         day_obj = Day.objects.get(name__iexact=day_param.strip())
-    except Exception:
+    except Exception as e:
+        logger.exception(f"Unexpected error in available_time_slots looking up day '{day_param}': {e}")
         return make_error_json_response(f"Day {day_param} does not exist", 400)
 
     schedules = Schedule.objects.filter(
