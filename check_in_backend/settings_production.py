@@ -60,6 +60,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# ── Cache (Redis) ─────────────────────────────────────────────────────────────
+# Shared cache is required for rate limiting to work correctly across
+# multiple Gunicorn workers — each worker would otherwise have its own counter.
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.environ["REDIS_URL"],
+    }
+}
+
 # ── Celery ────────────────────────────────────────────────────────────────────
 
 CELERY_BROKER_URL = os.environ["REDIS_URL"]

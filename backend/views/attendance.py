@@ -7,6 +7,8 @@ logger = logging.getLogger(__name__)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from django_ratelimit.decorators import ratelimit
+
 from backend.decorators import kiosk_or_above, teacher_or_above
 from backend.models import Attendance, Student
 from backend.serializers import (
@@ -17,10 +19,13 @@ from backend.views.helpers import (
 )
 
 
+@ratelimit(key='ip', rate='30/m', method='POST', block=False)
 @csrf_exempt
 @kiosk_or_above
 @require_http_methods(["POST"])
 def check_in(request):
+    if getattr(request, 'limited', False):
+        return make_error_json_response("Too many requests", 429)
     try:
         request_body = json.loads(request.body)
         check_in_data = request_body.get("checkInData", {})
