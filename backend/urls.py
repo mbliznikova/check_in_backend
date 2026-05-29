@@ -9,10 +9,11 @@ from .views import (
     prices, schedules, school_detail, schools, students_view,
     today_class_occurrences, today_classes_list, create_invitation,
     accept_invitation, list_memberships, edit_membership, delete_membership,
-    available_occurrence_time,
+    available_occurrence_time, health,
 )
 
 urlpatterns = [
+    path("health/", health, name="health"),
     path("check_in/", check_in, name="check_in"),
     path("confirm/", confirm, name="confirm"),
     path("attendances/", attendance_list, name="attendances"),
