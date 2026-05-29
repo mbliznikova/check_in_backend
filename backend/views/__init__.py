@@ -30,6 +30,7 @@ from backend.views.invitations import (
 from backend.views.memberships import (
     list_memberships, edit_membership, delete_membership,
 )
+from backend.views.health import health
 
 __all__ = [
     "get_user",
@@ -68,4 +69,5 @@ __all__ = [
     "list_memberships",
     "edit_membership",
     "delete_membership",
+    "health",
 ]
