@@ -19,9 +19,17 @@ from check_in_backend.settings import *  # noqa: F401, F403
 
 load_dotenv()
 
+# ── Required environment variables ────────────────────────────────────────────
+# Fail fast with a clear message rather than a cryptic KeyError at import time.
+
+_REQUIRED = ["DJANGO_SECRET_KEY", "DB_NAME", "DB_USER", "DB_PASSWORD", "REDIS_URL"]
+for _var in _REQUIRED:
+    if not os.environ.get(_var):
+        raise RuntimeError(f"{_var} environment variable is not set")
+
 # ── Security ──────────────────────────────────────────────────────────────────
 
-SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 
 DEBUG = False
 
