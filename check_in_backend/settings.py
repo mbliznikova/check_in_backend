@@ -33,6 +33,13 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
     raise RuntimeError("DJANGO_SECRET_KEY environment variable is not set")
 
+CLERK_JWKS_URL = os.environ.get("CLERK_JWKS_URL")
+CLERK_ISSUER = os.environ.get("CLERK_ISSUER")
+CLERK_AUDIENCE = os.environ.get("CLERK_AUDIENCE")
+
+if not all([CLERK_JWKS_URL, CLERK_ISSUER, CLERK_AUDIENCE]):
+    logging.warning("Clerk environment variables are not fully set; authentication will not work")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 

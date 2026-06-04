@@ -39,6 +39,9 @@ jobs:
       DB_USER: postgres
       DB_PASSWORD: postgres
       REDIS_URL: redis://localhost:6379/0
+      CLERK_JWKS_URL: https://placeholder.example.com/.well-known/jwks.json
+      CLERK_ISSUER: https://placeholder.example.com
+      CLERK_AUDIENCE: placeholder
 
     steps:
       - name: Checkout
