@@ -75,7 +75,7 @@ class SchoolsTestCase(BaseTestCase):
         self.assertIn("message", response_data)
         self.assertEqual(
             response_data["message"],
-            "School created successfully")
+            "School was created successfully")
         self.assertEqual(response_data["name"], "New School")
         self.assertEqual(response_data["clerkOrgId"], "new_org_456")
 
