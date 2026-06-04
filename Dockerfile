@@ -39,6 +39,9 @@ RUN DJANGO_SECRET_KEY=placeholder \
     DB_USER=placeholder \
     DB_PASSWORD=placeholder \
     REDIS_URL=redis://placeholder \
+    CLERK_JWKS_URL=https://placeholder.example.com/.well-known/jwks.json \
+    CLERK_ISSUER=https://placeholder.example.com \
+    CLERK_AUDIENCE=placeholder \
     python manage.py collectstatic --noinput
 
 RUN addgroup --system app && adduser --system --ingroup app app
