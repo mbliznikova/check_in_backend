@@ -249,6 +249,8 @@ def available_time_slots(request):
 
     try:
         day_obj = Day.objects.get(name__iexact=day_param.strip())
+    except Day.DoesNotExist:
+        return make_error_json_response(f"Day '{day_param} not found. Days table may not be populated.")
     except Exception as e:
         logger.exception(f"Unexpected error in available_time_slots looking up day '{day_param}': {e}")
         return make_error_json_response(f"Day {day_param} does not exist", 400)
