@@ -52,8 +52,8 @@ class TimeSlotsTestCase(BaseTestCase):
         )
         self.day_one_name = "Monday"
         self.day_two_name = "Tuesday"
-        self.day_one = Day.objects.create(name=self.day_one_name)
-        self.day_two = Day.objects.create(name=self.day_two_name)
+        self.day_one = Day.objects.get_or_create(name=self.day_one_name)
+        self.day_two = Day.objects.get_or_create(name=self.day_two_name)
         self.time_one = "10:00:00"
         self.time_two = "15:30:00"
         self.schedule_one = Schedule.objects.create(
