@@ -71,7 +71,7 @@ class ScheduleCRUDTestCase(BaseTestCase):
         super().setUp()
         self.class_model = ClassModel.objects.create(
             name="Test Class", school=self.school)
-        self.day = Day.objects.get_or_create(name="Monday")
+        self.day, _ = Day.objects.get_or_create(name="Monday")
         self.schedule = Schedule.objects.create(
             class_model=self.class_model,
             day=self.day,

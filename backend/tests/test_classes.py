@@ -97,8 +97,8 @@ class SchedulesTestCase(BaseTestCase):
             name="Foil", school=self.school)
         self.class_two = ClassModel.objects.create(
             name="Heavy sabre", school=self.school)
-        self.day_one = Day.objects.get_or_create(name="Monday")
-        self.day_two = Day.objects.get_or_create(name="Tuesday")
+        self.day_one, _ = Day.objects.get_or_create(name="Monday")
+        self.day_two, _ = Day.objects.get_or_create(name="Tuesday")
         self.time_one = "10:00:00"
         self.time_two = "15:00:00"
 
