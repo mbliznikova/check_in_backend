@@ -1,7 +1,8 @@
 import json
 import logging
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
+from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_time
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ def create_next_occurrence_for_schedule(schedule):
     class/date/time.
     """
     weekday_num = WEEKDAY_MAP[schedule.day.name.lower()]
-    today = date.today()
+    today = timezone.localtime().date()
     days_ahead = (weekday_num - today.isoweekday()) % 7
     occurrence_date = today + timedelta(days=days_ahead)
 
