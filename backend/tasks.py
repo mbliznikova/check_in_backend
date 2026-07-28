@@ -1,7 +1,8 @@
 import logging
-from datetime import date, timedelta
+from datetime import timedelta
 
 from celery import shared_task
+from django.utils import timezone
 
 from .models import ClassOccurrence, Schedule
 
@@ -15,7 +16,7 @@ def create_class_occurrences():
     """
 
     # Get the next Monday (weekdays start from 1)
-    today = date.today()
+    today = timezone.localtime().date()
     days_until_next_monday = (8 - today.isoweekday()) % 7
     next_monday_date = today + timedelta(days=days_until_next_monday)
 

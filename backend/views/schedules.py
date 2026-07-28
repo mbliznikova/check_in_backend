@@ -2,6 +2,7 @@ import json
 import logging
 from datetime import datetime, timedelta
 
+from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_time
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,53 @@ from backend.views.helpers import (
     make_error_json_response,
     make_success_json_response,
 )
+
+
+WEEKDAY_MAP = {
+    "monday": 1,
+    "tuesday": 2,
+    "wednesday": 3,
+    "thursday": 4,
+    "friday": 5,
+    "saturday": 6,
+    "sunday": 7,
+}
+
+
+def create_next_occurrence_for_schedule(schedule):
+    """
+    Create the single upcoming ClassOccurrence for a newly created
+    schedule, landing within the next 7 days (today through the same
+    weekday next week). Skips if one already exists for that
+    class/date/time.
+    """
+    weekday_num = WEEKDAY_MAP[schedule.day.name.lower()]
+    today = timezone.localtime().date()
+    days_ahead = (weekday_num - today.isoweekday()) % 7
+    occurrence_date = today + timedelta(days=days_ahead)
+
+    exists = ClassOccurrence.objects.filter(
+        class_model=schedule.class_model,
+        actual_date=occurrence_date,
+        actual_start_time=schedule.class_time,
+    ).exists()
+
+    if exists:
+        return None
+
+    return ClassOccurrence.objects.create(
+        school=schedule.school,
+        class_model=schedule.class_model,
+        fallback_class_name=schedule.class_model.name,
+        schedule=schedule,
+        planned_date=occurrence_date,
+        actual_date=occurrence_date,
+        planned_start_time=schedule.class_time,
+        actual_start_time=schedule.class_time,
+        planned_duration=schedule.class_model.duration_minutes,
+        actual_duration=schedule.class_model.duration_minutes,
+        is_cancelled=False,
+    )
 
 
 @teacher_or_above
@@ -208,6 +256,8 @@ def schedules(request):
                 saved_schedule = serializer.save(school=request.school)
             else:
                 return make_error_json_response(serializer.errors, 400)
+
+            create_next_occurrence_for_schedule(saved_schedule)
 
             response = ScheduleSerializer.dict_to_camel_case({
                 "message": "Schedule was created successfully",
