@@ -30,12 +30,14 @@ def get_clerk_user(request):
 
         clerk_user_id = decoded.get("sub")
         email = decoded.get("email")
+        raw_email_verified = decoded.get("email_verified")
+        email_verified = raw_email_verified is True or raw_email_verified == "verified"
         extra_fields = {
             "first_name": decoded.get("first_name"),
             "last_name": decoded.get("last_name"),
         }
 
-        user = user_sync.sync_clerk_user(clerk_user_id, email, extra_fields)
+        user = user_sync.sync_clerk_user(clerk_user_id, email, extra_fields, email_verified=email_verified)
 
         return user
 
