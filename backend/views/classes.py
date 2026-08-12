@@ -75,9 +75,9 @@ def classes(request):
 
 @teacher_or_above
 @csrf_exempt
-@require_http_methods(["PUT"])
+@require_http_methods(["PATCH"])
 def edit_class(request, class_id):
-    if request.method == "PUT":
+    if request.method == "PATCH":
         try:
             class_instance = ClassModel.objects.get(
                 id=class_id,

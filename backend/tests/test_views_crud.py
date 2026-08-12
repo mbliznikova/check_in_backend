@@ -2,6 +2,7 @@
 import json
 from datetime import time
 
+from django.urls import reverse
 from django.utils.timezone import now
 
 from ..models import (
@@ -32,11 +33,84 @@ class ClassCRUDTestCase(BaseTestCase):
         super().setUp()
         self.class_obj = ClassModel.objects.create(
             name="Test Class", school=self.school)
-        self.class_detail_url = f"/api/classes/{self.class_obj.id}/"
+        self.edit_class_url = reverse(
+            "edit_class", args=[self.class_obj.id])
 
-    # TODO: Add tests for PATCH /classes/<id>/
+    def test_patch_class_name_successfully(self):
+        response = self.client.patch(
+            self.edit_class_url,
+            json.dumps({"name": "Updated Class"}),
+            content_type="application/json",
+        )
+        self.positive_response_helper(
+            response, 200, "Class was updated successfully")
+        response_data = json.loads(response.content)
+        self.assertEqual(response_data["className"], "Updated Class")
+        self.class_obj.refresh_from_db()
+        self.assertEqual(self.class_obj.name, "Updated Class")
+
+    def test_patch_class_partial_update_leaves_other_fields_untouched(self):
+        response = self.client.patch(
+            self.edit_class_url,
+            json.dumps({"durationMinutes": 90}),
+            content_type="application/json",
+        )
+        self.positive_response_helper(
+            response, 200, "Class was updated successfully")
+        self.class_obj.refresh_from_db()
+        self.assertEqual(self.class_obj.duration_minutes, 90)
+        self.assertEqual(self.class_obj.name, "Test Class")
+        self.assertTrue(self.class_obj.is_recurring)
+
+    def test_patch_class_is_recurring(self):
+        response = self.client.patch(
+            self.edit_class_url,
+            json.dumps({"isRecurring": False}),
+            content_type="application/json",
+        )
+        self.positive_response_helper(
+            response, 200, "Class was updated successfully")
+        self.class_obj.refresh_from_db()
+        self.assertFalse(self.class_obj.is_recurring)
+
+    def test_patch_class_empty_name_validation(self):
+        response = self.client.patch(
+            self.edit_class_url,
+            json.dumps({"name": "   "}),
+            content_type="application/json",
+        )
+        self.error_response_helper(
+            response, 400, "Class name cannot be empty")
+        self.class_obj.refresh_from_db()
+        self.assertEqual(self.class_obj.name, "Test Class")
+
+    def test_patch_class_not_found(self):
+        non_existent_id = 9999
+        url = reverse("edit_class", args=[non_existent_id])
+        response = self.client.patch(
+            url,
+            json.dumps({"name": "Doesn't matter"}),
+            content_type="application/json",
+        )
+        self.error_response_helper(response, 404, "Class not found")
+
+    def test_patch_class_invalid_json(self):
+        response = self.client.patch(
+            self.edit_class_url,
+            "not valid json",
+            content_type="application/json",
+        )
+        self.error_response_helper(response, 400, "Invalid JSON")
+
+    def test_put_class_no_longer_allowed(self):
+        response = self.client.put(
+            self.edit_class_url,
+            json.dumps({"name": "Should Not Work"}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 405)
+
     # TODO: Add tests for DELETE /classes/<id>/
-    pass
 
 
 class ClassOccurrenceCRUDTestCase(BaseTestCase):
