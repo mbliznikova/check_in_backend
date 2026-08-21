@@ -78,6 +78,8 @@ class DaySerializer(CaseSerializer):
 
 
 class ScheduleSerializer(CaseSerializer):
+    day_name = serializers.CharField(source='day.name', read_only=True)
+
     class Meta:
         model = Schedule
         fields = '__all__'
