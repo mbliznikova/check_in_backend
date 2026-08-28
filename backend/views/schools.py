@@ -108,6 +108,7 @@ def edit_school(request, school_id):
         phone = request_body.get("phone")
         address = request_body.get("address")
         logo_url = request_body.get("logoUrl")
+        timezone = request_body.get("timezone")
 
         data_to_write = {}
         if name is not None:
@@ -121,6 +122,8 @@ def edit_school(request, school_id):
             data_to_write["address"] = address
         if logo_url is not None:
             data_to_write["logo_url"] = logo_url
+        if timezone is not None:
+            data_to_write["timezone"] = timezone
 
         if not data_to_write:
             return make_error_json_response("No fields to update", 400)
