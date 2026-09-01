@@ -1,6 +1,6 @@
 """Tests for payment functionality."""
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from django.urls import reverse
 from django.utils.timezone import now
@@ -37,8 +37,13 @@ class PaymentTestCase(BaseTestCase):
         self.assertEqual(response_data.get("className"), class_name)
 
         self.assertIn("paymentDate", response_data)
-        payment_date = datetime.fromisoformat(response_data.get("paymentDate"))
-        expected_date = self.today
+        # Compare in UTC: the DB backend may return the stored instant in a
+        # different offset (e.g. Postgres converts to settings.TIME_ZONE on
+        # read, SQLite returns UTC), so comparing raw year/month would be
+        # flaky near month boundaries.
+        payment_date = datetime.fromisoformat(
+            response_data.get("paymentDate")).astimezone(timezone.utc)
+        expected_date = self.today.astimezone(timezone.utc)
         self.assertEqual(payment_date.year, expected_date.year)
         self.assertEqual(payment_date.month, expected_date.month)
 
