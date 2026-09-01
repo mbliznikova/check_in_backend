@@ -87,37 +87,6 @@ class SchoolsTestCase(BaseTestCase):
         )
         self.assertEqual(membership.role, "owner")
 
-    def test_create_school_with_timezone(self):
-        request_data = {
-            "name": "New York School",
-            "clerkOrgId": "new_org_ny",
-            "timezone": "America/New_York",
-        }
-        response = self.client.post(
-            self.schools_url,
-            json.dumps(request_data),
-            content_type="application/json",
-        )
-        self.assertEqual(response.status_code, 201)
-        response_data = json.loads(response.content)
-        self.assertEqual(response_data["timezone"], "America/New_York")
-        new_school = School.objects.get(id=response_data["id"])
-        self.assertEqual(new_school.timezone, "America/New_York")
-
-    def test_create_school_invalid_timezone(self):
-        request_data = {
-            "name": "Invalid Timezone School",
-            "clerkOrgId": "new_org_invalid_tz",
-            "timezone": "Not/A_Timezone",
-        }
-        response = self.client.post(
-            self.schools_url,
-            json.dumps(request_data),
-            content_type="application/json",
-        )
-        self.error_response_helper(
-            response, 400, "'Not/A_Timezone' is not a valid IANA timezone")
-
     def test_create_school_duplicate_clerk_org_id(self):
         # Try to create a school with the same clerk_org_id as self.school
         request_data = {

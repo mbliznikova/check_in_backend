@@ -1,12 +1,9 @@
 import datetime
 
-from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.timezone import now
-
-from .utils import is_valid_timezone
 
 
 class School(models.Model):
@@ -17,20 +14,10 @@ class School(models.Model):
     phone = models.CharField(max_length=50, blank=True)
     address = models.TextField(blank=True)
     logo_url = models.URLField(blank=True)
-    timezone = models.CharField(max_length=64, default=settings.TIME_ZONE)
 
     @property
     def owner(self):
         return self.schoolmembership_set.filter(role="owner").first()
-
-    def clean(self):
-        if not is_valid_timezone(self.timezone):
-            raise ValidationError(
-                f"'{self.timezone}' is not a valid IANA timezone")
-
-    def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

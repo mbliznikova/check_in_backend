@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import datetime
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -9,7 +10,6 @@ from django.views.decorators.http import require_http_methods
 from backend.decorators import teacher_or_above
 from backend.models import ClassModel, Day, Schedule
 from backend.serializers import ClassModelSerializer
-from backend.utils import school_today
 from backend.views.helpers import (
     make_error_json_response, make_success_json_response,
 )
@@ -153,7 +153,7 @@ def delete_class(request, class_id):
 
 
 def today_classes_list(request):
-    today_name = school_today(request.school).strftime("%A")
+    today_name = datetime.today().strftime("%A")
 
     today_day_object = Day.objects.filter(name=today_name).first()
     if not today_day_object:
