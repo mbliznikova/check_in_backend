@@ -2,7 +2,6 @@ import json
 import logging
 from datetime import datetime, timedelta
 
-from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_time
 
 logger = logging.getLogger(__name__)
@@ -12,6 +11,7 @@ from django.views.decorators.http import require_http_methods
 from backend.decorators import teacher_or_above
 from backend.models import ClassModel, ClassOccurrence, Day, Schedule
 from backend.serializers import CaseSerializer, ScheduleSerializer
+from backend.utils import school_today
 from backend.views.helpers import (
     DEFAULT_DAY_END_TIME,
     DEFAULT_DAY_START_TIME,
@@ -40,7 +40,7 @@ def create_next_occurrence_for_schedule(schedule):
     class/date/time.
     """
     weekday_num = WEEKDAY_MAP[schedule.day.name.lower()]
-    today = timezone.localtime().date()
+    today = school_today(schedule.school)
     days_ahead = (weekday_num - today.isoweekday()) % 7
     occurrence_date = today + timedelta(days=days_ahead)
 

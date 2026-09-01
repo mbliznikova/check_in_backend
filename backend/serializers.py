@@ -6,6 +6,7 @@ from .models import (
     Attendance, ClassModel, ClassOccurrence, Day, MonthlyPaymentsSummary,
     Payment, Price, Schedule, School, SchoolMembership, Student, Invitation,
 )
+from .utils import is_valid_timezone
 
 
 class CaseSerializer(serializers.ModelSerializer):
@@ -113,6 +114,12 @@ class SchoolSerializer(CaseSerializer):
     class Meta:
         model = School
         fields = '__all__'
+
+    def validate_timezone(self, value):
+        if not is_valid_timezone(value):
+            raise serializers.ValidationError(
+                f"'{value}' is not a valid IANA timezone")
+        return value
 
 class InvitationSerializer(CaseSerializer):
     class Meta:

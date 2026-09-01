@@ -3,6 +3,10 @@ Django>=5.1,<6.0
 djangorestframework>=3.14,<4.0
 django-cors-headers>=4.0,<5.0
 
+# Timezone data (zoneinfo falls back to this when the OS tz database is
+# missing/incomplete, e.g. on slim Docker images)
+tzdata>=2024.1
+
 # Celery & Task Queue
 celery>=5.3,<6.0
 redis>=5.0,<6.0

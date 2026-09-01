@@ -11,6 +11,7 @@ from django.views.decorators.http import require_http_methods
 from backend.decorators import kiosk_or_above, teacher_or_above
 from backend.models import ClassModel, ClassOccurrence, Schedule
 from backend.serializers import ClassModelSerializer, ClassOccurrenceSerializer
+from backend.utils import school_today
 from backend.views.helpers import (
     DEFAULT_CLASS_DURATION_MINUTES, DEFAULT_CLASS_NAME,
     make_error_json_response, make_success_json_response,
@@ -226,9 +227,7 @@ def delete_occurrence(request, occurrence_id):
 
 @kiosk_or_above
 def today_class_occurrences(request):
-    from datetime import date
-
-    today_day = date.today()
+    today_day = school_today(request.school)
     occurrences = ClassOccurrence.objects.filter(
         school=request.school,
     ).filter(
