@@ -10,6 +10,7 @@ from django.views.decorators.http import require_http_methods
 from backend.decorators import admin_or_owner, any_authenticated_user
 from backend.models import School, SchoolMembership
 from backend.serializers import SchoolSerializer
+from backend.utils import is_valid_timezone
 from backend.views.helpers import (
     make_error_json_response, make_success_json_response,
 )
@@ -41,22 +42,31 @@ def schools(request):
             phone = request_body.get("phone", "")
             address = request_body.get("address", "")
             logo_url = request_body.get("logoUrl", "")
+            timezone = request_body.get("timezone")
 
             if not name or not clerk_org_id:
                 return make_error_json_response(
                     "Name and clerkOrgId are required", 400)
 
+            if timezone is not None and not is_valid_timezone(timezone):
+                return make_error_json_response(
+                    f"'{timezone}' is not a valid IANA timezone", 400)
+
             if School.objects.filter(clerk_org_id=clerk_org_id).exists():
                 return make_error_json_response(
                     "School with this clerk organization ID already exists", 400)
 
-            school = School.objects.create(
-                name=name,
-                clerk_org_id=clerk_org_id,
-                phone=phone,
-                address=address,
-                logo_url=logo_url
-            )
+            school_fields = {
+                "name": name,
+                "clerk_org_id": clerk_org_id,
+                "phone": phone,
+                "address": address,
+                "logo_url": logo_url,
+            }
+            if timezone is not None:
+                school_fields["timezone"] = timezone
+
+            school = School.objects.create(**school_fields)
 
             SchoolMembership.objects.create(
                 user=request.user,
