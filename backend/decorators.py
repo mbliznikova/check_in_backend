@@ -42,6 +42,19 @@ def any_authenticated_user(view_func):
     return clerk_login_required(view_func)
 
 
+def clerk_claims_required(view_func):
+    """Authenticates off request.clerk_claims (set by the middleware for any
+    request with a valid Clerk token), rather than request.user — for
+    endpoints that must work before a local User row exists, e.g. the
+    provisioning endpoint."""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not getattr(request, "clerk_claims", None):
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
 def kiosk_or_above(view_func):
     return role_required("kiosk", "teacher", "admin", "owner")(view_func)
 

@@ -37,6 +37,7 @@ class School(models.Model):
 
 
 class User(AbstractUser):
+    email = models.EmailField("email address", blank=True, unique=True)
     clerk_user_id = models.CharField(
         max_length=255,
         unique=True,
