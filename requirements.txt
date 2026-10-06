@@ -13,6 +13,7 @@ redis>=5.0,<6.0
 
 # Authentication & Security
 PyJWT>=2.8,<3.0  # PyJWKClient is a class inside PyJWT, not a separate package
+requests>=2.31,<3.0  # Clerk Backend API calls (e.g. deleting a Clerk user)
 
 # Environment Variables
 python-dotenv>=1.0,<2.0

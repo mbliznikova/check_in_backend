@@ -23,7 +23,7 @@ load_dotenv()
 # Fail fast with a clear message rather than a cryptic KeyError at import time.
 
 _REQUIRED = ["DJANGO_SECRET_KEY", "DB_NAME", "DB_USER", "DB_PASSWORD", "REDIS_URL",
-             "CLERK_JWKS_URL", "CLERK_ISSUER", "CLERK_AUDIENCE"]
+             "CLERK_JWKS_URL", "CLERK_ISSUER", "CLERK_AUDIENCE", "CLERK_SECRET_KEY"]
 for _var in _REQUIRED:
     if not os.environ.get(_var):
         raise RuntimeError(f"{_var} environment variable is not set")
