@@ -1,31 +1,36 @@
 import logging
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import AnonymousUser
-from django.db import transaction
+from django.db import IntegrityError, transaction
 
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
 
+class EmailConflict(Exception):
+    """Raised when a new, unverified Clerk identity's email already belongs
+    to an existing account. The caller (view) turns this into a 409 instead
+    of letting a DB IntegrityError on create get swallowed into a silent
+    auth failure."""
+
+    def __init__(self, email):
+        self.email = email
+        super().__init__(f"Email already associated with an existing account: {email}")
+
+
 def _find_by_clerk_id(clerk_user_id):
     return User.objects.filter(clerk_user_id=clerk_user_id).first()
 
 
-def _find_and_reattach_by_email(clerk_user_id, user_email):
-    user = User.objects.filter(email=user_email).first()
-
-    if user is None:
-        return None
-
+def _reattach(clerk_user_id, user):
     old_clerk_user_id = user.clerk_user_id
     user.clerk_user_id = clerk_user_id
     user.save(update_fields=["clerk_user_id"])
 
     logger.info(
         "Reattached clerk_user_id for existing user email=%s: old_clerk_user_id=%s new_clerk_user_id=%s",
-        user_email, old_clerk_user_id, clerk_user_id,
+        user.email, old_clerk_user_id, clerk_user_id,
     )
 
     return user
@@ -35,33 +40,31 @@ def _create_user(clerk_user_id, user_email, extra_fields):
     return User.objects.create(
         clerk_user_id=clerk_user_id,
         email=user_email,
-        username=user_email,
+        username=clerk_user_id,
         **extra_fields
     )
 
 
-def sync_clerk_user(clerk_user_id, user_email, extra_fields, email_verified=False):
-    if not clerk_user_id or not user_email:
-        logger.warning(
-            "Cannot sync Clerk user: missing clerk_user_id=%s or user_email=%s",
-            clerk_user_id, user_email,
-        )
-        return AnonymousUser()
-
+def provision_clerk_user(clerk_user_id, user_email, email_verified, extra_fields):
     extra_fields = {k: v for k, v in (extra_fields or {}).items() if v is not None}
 
-    try:
-        with transaction.atomic():
+    with transaction.atomic():
+        user = _find_by_clerk_id(clerk_user_id)
+        if user is not None:
+            return user
+
+        existing_by_email = User.objects.filter(email=user_email).first()
+        if existing_by_email is not None:
+            if not email_verified:
+                raise EmailConflict(user_email)
+            return _reattach(clerk_user_id, existing_by_email)
+
+        try:
+            return _create_user(clerk_user_id, user_email, extra_fields)
+        except IntegrityError:
+            # Race: another request provisioned the same clerk_user_id
+            # concurrently between our lookup above and this create.
             user = _find_by_clerk_id(clerk_user_id)
-
-            if user is None and email_verified:
-                user = _find_and_reattach_by_email(clerk_user_id, user_email)
-
             if user is None:
-                user = _create_user(clerk_user_id, user_email, extra_fields)
-
-        return user
-
-    except Exception as e:
-        logger.exception("Failed to sync Clerk user clerk_user_id=%s: %s", clerk_user_id, e)
-        return AnonymousUser()
+                raise
+            return user

@@ -5,7 +5,7 @@ from unittest.mock import patch
 from django.test import TestCase
 
 from backend.models import School, SchoolMembership, User
-from backend.services.user_sync import sync_clerk_user
+from backend.services.user_sync import provision_clerk_user
 
 FAKE_CLERK_PAYLOAD = {
     "sub": "clerk_test_user_123",
@@ -36,9 +36,10 @@ class BaseTestCase(TestCase):
         super().setUp()
         self.client.defaults["HTTP_AUTHORIZATION"] = "Bearer test-token"
 
-        sync_clerk_user(
+        provision_clerk_user(
             clerk_user_id=FAKE_CLERK_PAYLOAD["sub"],
             user_email=FAKE_CLERK_PAYLOAD["email"],
+            email_verified=True,
             extra_fields={
                 "first_name": FAKE_CLERK_PAYLOAD["first_name"],
                 "last_name": FAKE_CLERK_PAYLOAD["last_name"],

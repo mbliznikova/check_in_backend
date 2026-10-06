@@ -2,7 +2,7 @@
 from backend.views.attendance import (
     attendance_list, check_in, confirm, get_attended_students,
 )
-from backend.views.auth import get_user
+from backend.views.auth import get_user, provision_user
 from backend.views.classes import (
     classes, delete_class, edit_class, today_classes_list,
 )
@@ -34,6 +34,7 @@ from backend.views.health import health
 
 __all__ = [
     "get_user",
+    "provision_user",
     "classes",
     "today_classes_list",
     "edit_class",
