@@ -42,6 +42,7 @@ RUN DJANGO_SECRET_KEY=placeholder \
     CLERK_JWKS_URL=https://placeholder.example.com/.well-known/jwks.json \
     CLERK_ISSUER=https://placeholder.example.com \
     CLERK_AUDIENCE=placeholder \
+    CLERK_SECRET_KEY=placeholder \
     python manage.py collectstatic --noinput
 
 RUN addgroup --system app && adduser --system --ingroup app app
