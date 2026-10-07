@@ -120,24 +120,30 @@ def delete_account(request):
                 if owner_membership_count == 1:
                     sole_owned_school_ids.append(sid)
 
-            cascaded_org_ids = list(
+            cascaded_schools = list(
                 School.objects.filter(id__in=sole_owned_school_ids)
-                .values_list("clerk_org_id", flat=True)
+                .values_list("id", "clerk_org_id")
             )
+            membership_count = SchoolMembership.objects.filter(user=user).count()
 
             School.objects.filter(id__in=sole_owned_school_ids).delete()
             SchoolMembership.objects.filter(user=user).delete()
             user.delete()
     except Exception:
-        logger.exception("delete_account: local cascade failed for user_id=%s", user_id)
+        logger.exception(
+            "delete_account: local cascade failed for user_id=%s clerk_user_id=%s",
+            user_id, clerk_user_id,
+        )
         return make_error_json_response("An internal error occurred", 500)
 
-    if cascaded_org_ids:
-        logger.info(
-            "delete_account: cascaded schools with clerk_org_id=%s for user_id=%s "
-            "(Clerk org cleanup not automated)",
-            cascaded_org_ids, user_id,
-        )
+    cascaded_school_ids = [sid for sid, _ in cascaded_schools]
+    cascaded_org_ids = [org_id for _, org_id in cascaded_schools]
+
+    logger.info(
+        "delete_account: deleted user_id=%s clerk_user_id=%s, removed %d membership(s), "
+        "cascaded school_ids=%s clerk_org_ids=%s (Clerk org cleanup not automated yet)",
+        user_id, clerk_user_id, membership_count, cascaded_school_ids, cascaded_org_ids,
+    )
 
     try:
         delete_clerk_user(clerk_user_id)
