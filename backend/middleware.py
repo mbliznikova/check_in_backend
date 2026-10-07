@@ -66,7 +66,7 @@ def resolve_clerk_user(claims):
 
 
 # Paths that do not require school membership validation
-EXEMPT_PATHS = {"/backend/me/", "/backend/me/provision/", "/backend/schools/"}
+EXEMPT_PATHS = {"/backend/me/", "/backend/me/provision/", "/backend/me/delete/", "/backend/schools/"}
 
 
 class ClerkAuthenticationMiddleware:

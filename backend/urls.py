@@ -2,10 +2,10 @@ from django.urls import path
 
 from .views import (
     attendance_list, available_time_slots, check_in, class_occurrences,
-    classes, confirm, create_student, delete_class, delete_occurrence,
-    delete_payment, delete_schedule, delete_school, delete_student, edit_class,
-    edit_occurrence, edit_price, edit_school, edit_student,
-    get_attended_students, get_user, payment_summary, payments,
+    classes, confirm, create_student, delete_account, delete_class,
+    delete_occurrence, delete_payment, delete_schedule, delete_school,
+    delete_student, edit_class, edit_occurrence, edit_price, edit_school,
+    edit_student, get_attended_students, get_user, payment_summary, payments,
     prices, provision_user, schedules, school_detail, schools, students_view,
     today_class_occurrences, today_classes_list, create_invitation,
     accept_invitation, list_memberships, edit_membership, delete_membership,
@@ -40,6 +40,7 @@ urlpatterns = [
     path("available_occurrence_time/", available_occurrence_time, name="available_occurrence_time"),
     path("me/", get_user, name="get_user"),
     path("me/provision/", provision_user, name="provision_user"),
+    path("me/delete/", delete_account, name="delete_account"),
     path("schools/", schools, name="schools"),
     path("schools/<int:school_id>/", school_detail, name="school_detail"),
     path("schools/<int:school_id>/edit/", edit_school, name="edit_school"),

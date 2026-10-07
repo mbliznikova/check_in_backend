@@ -36,6 +36,7 @@ if not SECRET_KEY:
 CLERK_JWKS_URL = os.environ.get("CLERK_JWKS_URL")
 CLERK_ISSUER = os.environ.get("CLERK_ISSUER")
 CLERK_AUDIENCE = os.environ.get("CLERK_AUDIENCE")
+CLERK_SECRET_KEY = os.environ.get("CLERK_SECRET_KEY")
 
 if not all([CLERK_JWKS_URL, CLERK_ISSUER, CLERK_AUDIENCE]):
     logging.warning("Clerk environment variables are not fully set; authentication will not work")
