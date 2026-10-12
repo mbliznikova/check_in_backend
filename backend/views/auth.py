@@ -7,7 +7,9 @@ from django.views.decorators.http import require_http_methods
 from backend.decorators import any_authenticated_user, clerk_claims_required
 from backend.models import School, SchoolMembership
 from backend.serializers import CaseSerializer
-from backend.services.clerk_client import ClerkDeleteError, delete_clerk_user
+from backend.services.clerk_client import (
+    ClerkDeleteError, ClerkOrgDeleteError, delete_clerk_organization, delete_clerk_user,
+)
 from backend.services.user_sync import EmailConflict, provision_clerk_user
 from backend.views.helpers import (
     make_error_json_response, make_success_json_response,
@@ -141,10 +143,11 @@ def delete_account(request):
 
     logger.info(
         "delete_account: deleted user_id=%s clerk_user_id=%s, removed %d membership(s), "
-        "cascaded school_ids=%s clerk_org_ids=%s (Clerk org cleanup not automated yet)",
+        "cascaded school_ids=%s clerk_org_ids=%s",
         user_id, clerk_user_id, membership_count, cascaded_school_ids, cascaded_org_ids,
     )
 
+    user_delete_failed = False
     try:
         delete_clerk_user(clerk_user_id)
     except ClerkDeleteError:
@@ -153,6 +156,19 @@ def delete_account(request):
             "clerk_user_id=%s could not be deleted after retries — needs manual cleanup",
             user_id, clerk_user_id,
         )
+        user_delete_failed = True
+
+    for school_id, org_id in cascaded_schools:
+        try:
+            delete_clerk_organization(org_id)
+        except ClerkOrgDeleteError:
+            logger.error(
+                "delete_account: cascaded school_id=%s clerk_org_id=%s could not be "
+                "deleted in Clerk after retries — needs manual cleanup",
+                school_id, org_id,
+            )
+
+    if user_delete_failed:
         return make_error_json_response(
             "Account data was deleted, but your sign-in identity could not be "
             "fully removed. Contact support.", 502,
