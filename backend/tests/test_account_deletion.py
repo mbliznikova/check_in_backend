@@ -23,6 +23,15 @@ class AccountDeletionTests(TestCase):
     def _mock_clerk_delete(self, **kwargs):
         return patch("backend.services.clerk_client.requests.delete", **kwargs)
 
+    def _mock_clerk_delete_by_resource(self, user_status=200, org_status=200):
+        """Like _mock_clerk_delete, but lets a test give the user-delete and
+        org-delete calls different responses, distinguishing them by URL."""
+        def side_effect(url, **kwargs):
+            if "/organizations/" in url:
+                return Mock(status_code=org_status, text="org error")
+            return Mock(status_code=user_status, text="user error")
+        return patch("backend.services.clerk_client.requests.delete", side_effect=side_effect)
+
     def _make_user(self, clerk_user_id, email):
         return User.objects.create(
             clerk_user_id=clerk_user_id, email=email, username=clerk_user_id,
@@ -50,7 +59,85 @@ class AccountDeletionTests(TestCase):
         self.assertEqual(User.objects.count(), 0)
         self.assertFalse(School.objects.filter(id=school.id).exists())
         self.assertFalse(Student.objects.filter(school_id=school.id).exists())
+        # One call for the Clerk user delete, one for the cascaded Clerk org delete.
+        self.assertEqual(mock_delete.call_count, 2)
+        called_urls = [c.args[0] for c in mock_delete.call_args_list]
+        self.assertTrue(any("/users/user_owner" in u for u in called_urls))
+        self.assertTrue(any("/organizations/org_sole" in u for u in called_urls))
+
+    def test_sole_owner_cascade_deletes_clerk_org(self):
+        user = self._make_user("user_org_owner", "org_owner@example.com")
+        school = self._make_school("Org School", "org_to_delete")
+        SchoolMembership.objects.create(user=user, school=school, role="owner")
+
+        with self._mock_clerk_delete(return_value=Mock(status_code=200)) as mock_delete:
+            response = self._delete_account("user_org_owner")
+
+        self.assertEqual(response.status_code, 200)
+        called_urls = [c.args[0] for c in mock_delete.call_args_list]
+        self.assertTrue(
+            any(u.endswith("/organizations/org_to_delete") for u in called_urls))
+
+    def test_mixed_ownership_only_deletes_sole_owned_org(self):
+        user = self._make_user("user_mixed_org", "mixed_org@example.com")
+        other_owner = self._make_user("user_other_owner2", "other_owner2@example.com")
+
+        school_a = self._make_school("Sole Owned A2", "org_a2")
+        school_b = self._make_school("Co Owned B2", "org_b2")
+
+        SchoolMembership.objects.create(user=user, school=school_a, role="owner")
+        SchoolMembership.objects.create(user=user, school=school_b, role="owner")
+        SchoolMembership.objects.create(user=other_owner, school=school_b, role="owner")
+
+        with self._mock_clerk_delete(return_value=Mock(status_code=200)) as mock_delete:
+            response = self._delete_account("user_mixed_org")
+
+        self.assertEqual(response.status_code, 200)
+        called_urls = [c.args[0] for c in mock_delete.call_args_list]
+        self.assertTrue(any("/organizations/org_a2" in u for u in called_urls))
+        self.assertFalse(any("/organizations/org_b2" in u for u in called_urls))
+
+    def test_org_delete_404_treated_as_success(self):
+        user = self._make_user("user_org_gone", "org_gone@example.com")
+        school = self._make_school("Already Gone Org School", "org_already_gone")
+        SchoolMembership.objects.create(user=user, school=school, role="owner")
+
+        with self._mock_clerk_delete_by_resource(user_status=200, org_status=404) as mock_delete:
+            response = self._delete_account("user_org_gone")
+
+        self.assertEqual(response.status_code, 200)
+        # Not retried: one call for the user delete, one for the org delete.
+        self.assertEqual(mock_delete.call_count, 2)
+
+    def test_org_delete_failure_does_not_block_response(self):
+        user = self._make_user("user_org_fail", "org_fail@example.com")
+        school = self._make_school("Org Fail School", "org_fail_id")
+        SchoolMembership.objects.create(user=user, school=school, role="owner")
+
+        with self._mock_clerk_delete_by_resource(user_status=200, org_status=500) as mock_delete:
+            with patch("backend.services.clerk_client.time.sleep"):
+                response = self._delete_account("user_org_fail")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(clerk_user_id="user_org_fail").exists())
+        self.assertFalse(School.objects.filter(id=school.id).exists())
+        # One user-delete call, three org-delete attempts (retries exhausted).
+        self.assertEqual(mock_delete.call_count, 4)
+
+    def test_co_owner_delete_never_attempts_org_delete(self):
+        user_a = self._make_user("user_co_a", "co_a@example.com")
+        user_b = self._make_user("user_co_b", "co_b@example.com")
+        school = self._make_school("Co Org School", "org_co_untouched")
+        SchoolMembership.objects.create(user=user_a, school=school, role="owner")
+        SchoolMembership.objects.create(user=user_b, school=school, role="owner")
+
+        with self._mock_clerk_delete(return_value=Mock(status_code=200)) as mock_delete:
+            response = self._delete_account("user_co_a")
+
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(mock_delete.call_count, 1)
+        called_urls = [c.args[0] for c in mock_delete.call_args_list]
+        self.assertFalse(any("/organizations/" in u for u in called_urls))
 
     def test_co_owner_delete_removes_only_membership(self):
         user_a = self._make_user("user_a", "a@example.com")
