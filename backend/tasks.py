@@ -25,8 +25,11 @@ def create_class_occurrences():
         "sunday": 7,
     }
 
+    # One-off classes never auto-generate occurrences, even if stray
+    # Schedule rows still reference them.
     schedules = Schedule.objects.select_related(
-        "class_model", "day", "school").all()
+        "class_model", "day", "school").filter(
+            class_model__is_recurring=True)
 
     occurrences_to_create = []
     next_monday_by_school = {}

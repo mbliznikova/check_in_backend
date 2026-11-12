@@ -73,6 +73,53 @@ class ClassCRUDTestCase(BaseTestCase):
         self.class_obj.refresh_from_db()
         self.assertFalse(self.class_obj.is_recurring)
 
+    def _make_schedule_with_occurrence(self):
+        monday, _ = Day.objects.get_or_create(name="Monday")
+        schedule = Schedule.objects.create(
+            class_model=self.class_obj, school=self.school, day=monday,
+            class_time=time(10, 0))
+        today = now().date()
+        occurrence = ClassOccurrence.objects.create(
+            school=self.school, class_model=self.class_obj, schedule=schedule,
+            planned_date=today, actual_date=today,
+            planned_start_time=time(10, 0), actual_start_time=time(10, 0),
+            planned_duration=60, actual_duration=60)
+        return schedule, occurrence
+
+    def test_patch_class_to_one_off_deletes_schedules(self):
+        _, occurrence = self._make_schedule_with_occurrence()
+
+        response = self.client.patch(
+            self.edit_class_url,
+            json.dumps({"isRecurring": False}),
+            content_type="application/json",
+        )
+        self.positive_response_helper(
+            response, 200, "Class was updated successfully")
+        self.assertEqual(
+            json.loads(response.content)["deletedSchedulesCount"], 1)
+        self.assertFalse(
+            Schedule.objects.filter(class_model=self.class_obj).exists())
+
+        # Existing occurrence survives, just detached from its schedule.
+        occurrence.refresh_from_db()
+        self.assertIsNone(occurrence.schedule)
+
+    def test_patch_class_other_fields_keeps_schedules(self):
+        self._make_schedule_with_occurrence()
+
+        response = self.client.patch(
+            self.edit_class_url,
+            json.dumps({"name": "Renamed", "isRecurring": True}),
+            content_type="application/json",
+        )
+        self.positive_response_helper(
+            response, 200, "Class was updated successfully")
+        self.assertEqual(
+            json.loads(response.content)["deletedSchedulesCount"], 0)
+        self.assertEqual(
+            Schedule.objects.filter(class_model=self.class_obj).count(), 1)
+
     def test_patch_class_empty_name_validation(self):
         response = self.client.patch(
             self.edit_class_url,

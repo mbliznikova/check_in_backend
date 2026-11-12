@@ -233,6 +233,10 @@ def schedules(request):
             except ClassModel.DoesNotExist:
                 return make_error_json_response("Class not found", 404)
 
+            if not class_model.is_recurring:
+                return make_error_json_response(
+                    "Cannot add a schedule to a one-off class", 400)
+
             try:
                 day = Day.objects.get(name=day_name)
             except Day.DoesNotExist:
