@@ -5,7 +5,8 @@ from datetime import time
 from django.db import IntegrityError, transaction
 from django.urls import reverse
 
-from ..models import ClassModel, Day, Schedule
+from ..models import ClassModel, ClassOccurrence, Day, Schedule
+from ..tasks import create_class_occurrences
 from .test_utils import BaseTestCase
 
 
@@ -223,3 +224,46 @@ class SchedulesTestCase(BaseTestCase):
                     class_time=time(10, 0, 0),
                     school=self.school,
                 )
+
+    def test_can_not_schedule_one_off_class(self):
+        one_off = ClassModel.objects.create(
+            name="Workshop", school=self.school, is_recurring=False)
+        request_data = {
+            "classId": one_off.id,
+            "day": self.day_one.name,
+            "classTime": self.time_one,
+        }
+
+        response = self.client.post(
+            self.schedules_url,
+            json.dumps(request_data),
+            content_type="application/json",
+        )
+        self.error_response_helper(
+            response, 400, "Cannot add a schedule to a one-off class")
+        self.assertFalse(Schedule.objects.filter(class_model=one_off).exists())
+
+
+class CreateClassOccurrencesRecurringTestCase(BaseTestCase):
+    """create_class_occurrences() must skip one-off classes."""
+
+    def test_skips_stray_schedules_of_one_off_classes(self):
+        monday, _ = Day.objects.get_or_create(name="Monday")
+        recurring = ClassModel.objects.create(
+            name="Weekly", school=self.school)
+        one_off = ClassModel.objects.create(
+            name="One-off", school=self.school, is_recurring=False)
+        Schedule.objects.create(
+            class_model=recurring, school=self.school, day=monday,
+            class_time=time(10, 0))
+        # Stray row, e.g. left over from before the class became one-off.
+        Schedule.objects.create(
+            class_model=one_off, school=self.school, day=monday,
+            class_time=time(12, 0))
+
+        create_class_occurrences()
+
+        self.assertEqual(
+            ClassOccurrence.objects.filter(class_model=recurring).count(), 1)
+        self.assertFalse(
+            ClassOccurrence.objects.filter(class_model=one_off).exists())

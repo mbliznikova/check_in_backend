@@ -1,6 +1,7 @@
 import json
 import logging
 
+from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
 
 logger = logging.getLogger(__name__)
@@ -98,10 +99,25 @@ def edit_class(request, class_id):
             if duration_minutes is not None:
                 class_instance.duration_minutes = duration_minutes
 
+            switched_to_one_off = (
+                is_recurring is not None
+                and not is_recurring
+                and class_instance.is_recurring
+            )
+
             if is_recurring is not None and is_recurring != class_instance.is_recurring:
                 class_instance.is_recurring = is_recurring
 
-            class_instance.save()
+            deleted_schedules_count = 0
+            with transaction.atomic():
+                class_instance.save()
+                if switched_to_one_off:
+                    # Existing occurrences keep their rows (schedule FK is
+                    # SET_NULL); only the recurring definitions are removed.
+                    deleted_schedules_count, _ = Schedule.objects.filter(
+                        class_model=class_instance,
+                        school=request.school,
+                    ).delete()
 
             response = ClassModelSerializer.dict_to_camel_case({
                 "message": "Class was updated successfully",
@@ -109,6 +125,7 @@ def edit_class(request, class_id):
                 "class_name": class_instance.name,
                 "duration_minutes": class_instance.duration_minutes,
                 "is_recurring": class_instance.is_recurring,
+                "deleted_schedules_count": deleted_schedules_count,
             })
 
             return make_success_json_response(200, response_body=response)

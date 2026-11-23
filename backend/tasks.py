@@ -25,8 +25,11 @@ def create_class_occurrences():
         "sunday": 7,
     }
 
+    # One-off classes never auto-generate occurrences, even if stray
+    # Schedule rows still reference them.
     schedules = Schedule.objects.select_related(
-        "class_model", "day", "school").all()
+        "class_model", "day", "school").filter(
+            class_model__is_recurring=True)
 
     occurrences_to_create = []
     next_monday_by_school = {}
@@ -52,7 +55,9 @@ def create_class_occurrences():
             weekday_num = weekday_map[schedule.day.name.lower()]
             occurrence_date = next_monday_date + timedelta(days=weekday_num - 1)
 
+            # Mirrors ClassOccurrence's unique_occurrence_per_class_slot.
             exist = ClassOccurrence.objects.filter(
+                school=schedule.school,
                 class_model=schedule.class_model,
                 actual_date=occurrence_date,
                 actual_start_time=schedule.class_time,
@@ -84,9 +89,13 @@ def create_class_occurrences():
             logger.exception("Failed to process schedule id=%s", schedule.id)
 
     if occurrences_to_create:
-        ClassOccurrence.objects.bulk_create(occurrences_to_create)
+        # ignore_conflicts: a row that races in between the exists() check
+        # and this insert is a true duplicate of the same class slot, so it
+        # is skipped instead of failing the whole batch for every school.
+        ClassOccurrence.objects.bulk_create(
+            occurrences_to_create, ignore_conflicts=True)
         logger.info(
-            f"Created {
+            f"Attempted to create {
                 len(occurrences_to_create)} new class occurrences.")
     else:
         logger.info("No new class occurrences to create")

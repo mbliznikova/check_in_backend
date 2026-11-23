@@ -1,6 +1,7 @@
 import json
 import logging
 
+from django.db import IntegrityError
 from django.db.models import Q
 
 logger = logging.getLogger(__name__)
@@ -16,6 +17,27 @@ from backend.views.helpers import (
     DEFAULT_CLASS_DURATION_MINUTES, DEFAULT_CLASS_NAME,
     make_error_json_response, make_success_json_response,
 )
+
+SLOT_TAKEN_MESSAGE = "This class already has an occurrence at that date and time"
+
+
+def is_class_slot_taken(school, class_model_id, actual_date,
+                        actual_start_time, exclude_id=None):
+    """
+    Mirrors ClassOccurrence's unique_occurrence_per_class_slot constraint.
+    Occurrences without a class have no uniqueness rule.
+    """
+    if class_model_id is None:
+        return False
+    occurrences = ClassOccurrence.objects.filter(
+        school=school,
+        class_model_id=class_model_id,
+        actual_date=actual_date,
+        actual_start_time=actual_start_time,
+    )
+    if exclude_id is not None:
+        occurrences = occurrences.exclude(id=exclude_id)
+    return occurrences.exists()
 
 
 @kiosk_or_above
@@ -80,6 +102,11 @@ def class_occurrences(request):
             if not fallback_class_name and not class_model:
                 fallback_class_name = DEFAULT_CLASS_NAME
 
+            if class_model and is_class_slot_taken(
+                    request.school, class_model.id, planned_date,
+                    planned_start_time):
+                return make_error_json_response(SLOT_TAKEN_MESSAGE, 409)
+
             data_to_write = {
                 "class_model": class_model.id if class_model else None,
                 "fallback_class_name": fallback_class_name or None,
@@ -114,6 +141,9 @@ def class_occurrences(request):
 
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
+        except IntegrityError:
+            # Backstop for a race between the check above and the insert.
+            return make_error_json_response(SLOT_TAKEN_MESSAGE, 409)
         except Exception as e:
             logger.exception(f"Unexpected error in class_occurrences POST: {e}")
             return make_error_json_response("An internal error occurred", 500)
@@ -170,6 +200,19 @@ def edit_occurrence(request, occurrence_id):
             if notes is not None:
                 data_to_write["notes"] = notes
 
+            if ("actual_date" in data_to_write
+                    or "actual_start_time" in data_to_write):
+                if is_class_slot_taken(
+                        request.school,
+                        occurrence_instance.class_model_id,
+                        data_to_write.get(
+                            "actual_date", occurrence_instance.actual_date),
+                        data_to_write.get(
+                            "actual_start_time",
+                            occurrence_instance.actual_start_time),
+                        exclude_id=occurrence_instance.id):
+                    return make_error_json_response(SLOT_TAKEN_MESSAGE, 409)
+
             serializer = ClassOccurrenceSerializer(
                 occurrence_instance, data=data_to_write, partial=True)
             if serializer.is_valid():
@@ -189,6 +232,8 @@ def edit_occurrence(request, occurrence_id):
             return make_error_json_response("Class occurrence not found", 404)
         except json.JSONDecodeError:
             return make_error_json_response("Invalid JSON", 400)
+        except IntegrityError:
+            return make_error_json_response(SLOT_TAKEN_MESSAGE, 409)
         except Exception as e:
             logger.exception(f"Unexpected error in edit_occurrence (id={occurrence_id}): {e}")
             return make_error_json_response("An internal error occurred", 500)

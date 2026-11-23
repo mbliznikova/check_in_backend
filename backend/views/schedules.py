@@ -2,6 +2,7 @@ import json
 import logging
 from datetime import datetime, timedelta
 
+from django.db import transaction
 from django.utils.dateparse import parse_date, parse_time
 
 logger = logging.getLogger(__name__)
@@ -44,7 +45,9 @@ def create_next_occurrence_for_schedule(schedule):
     days_ahead = (weekday_num - today.isoweekday()) % 7
     occurrence_date = today + timedelta(days=days_ahead)
 
+    # Mirrors ClassOccurrence's unique_occurrence_per_class_slot constraint.
     exists = ClassOccurrence.objects.filter(
+        school=schedule.school,
         class_model=schedule.class_model,
         actual_date=occurrence_date,
         actual_start_time=schedule.class_time,
@@ -233,6 +236,10 @@ def schedules(request):
             except ClassModel.DoesNotExist:
                 return make_error_json_response("Class not found", 404)
 
+            if not class_model.is_recurring:
+                return make_error_json_response(
+                    "Cannot add a schedule to a one-off class", 400)
+
             try:
                 day = Day.objects.get(name=day_name)
             except Day.DoesNotExist:
@@ -252,12 +259,14 @@ def schedules(request):
             }
 
             serializer = ScheduleSerializer(data=data_to_write)
-            if serializer.is_valid():
-                saved_schedule = serializer.save(school=request.school)
-            else:
+            if not serializer.is_valid():
                 return make_error_json_response(serializer.errors, 400)
 
-            create_next_occurrence_for_schedule(saved_schedule)
+            # Schedule and its first occurrence succeed or fail together,
+            # so a failed occurrence never leaves a stray Schedule row.
+            with transaction.atomic():
+                saved_schedule = serializer.save(school=request.school)
+                create_next_occurrence_for_schedule(saved_schedule)
 
             response = ScheduleSerializer.dict_to_camel_case({
                 "message": "Schedule was created successfully",
