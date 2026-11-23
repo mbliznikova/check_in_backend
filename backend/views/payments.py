@@ -51,7 +51,8 @@ def prices(request):
             class_id = request_body.get("classId")
             amount = request_body.get("amount")
 
-            if not class_id or not amount:
+            # amount may legitimately be 0 (free class), so check for None.
+            if not class_id or amount is None:
                 return make_error_json_response("Missing required fields", 400)
 
             try:
