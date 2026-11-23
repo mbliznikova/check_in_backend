@@ -193,11 +193,20 @@ class ClassOccurrence(models.Model):
         return f'{self.safe_class_name} at {date} on {time}'
 
     class Meta:
-        unique_together = (
-            "school",
-            "fallback_class_name",
-            "actual_date",
-            "actual_start_time")
+        # Unique per class, not per name: orphans (class deleted ->
+        # class_model NULL) and renamed classes keep their old
+        # fallback_class_name and must not block a class with that name.
+        # Rows without a class have no rule (NULLs are distinct), so
+        # deleting classes can never collide on SET_NULL.
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "school", "class_model", "actual_date",
+                    "actual_start_time"],
+                condition=models.Q(class_model__isnull=False),
+                name="unique_occurrence_per_class_slot",
+            ),
+        ]
         indexes = [
             models.Index(fields=["school"]),
         ]
